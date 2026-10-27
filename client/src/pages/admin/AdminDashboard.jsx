@@ -30,32 +30,9 @@ import StatCard from '../../components/common/StatCard';
 import Button from '../../components/common/Button';
 import Badge from '../../components/common/Badge';
 import { mockAdminStats } from '../../data/mockData';
-import { adminService } from '../../services/adminService';
 
 export default function AdminDashboard() {
   const COLORS = ['#2563EB', '#7C3AED', '#06B6D4', '#F59E0B', '#10B981'];
-  const [stats, setStats] = React.useState(mockAdminStats);
-
-  React.useEffect(() => {
-    const fetchAnalytics = async () => {
-      try {
-        const res = await adminService.getAnalytics();
-        if (res && res.analytics) {
-          setStats((prev) => ({
-            ...prev,
-            totalUsers: res.analytics.totalUsers || prev.totalUsers,
-            activeUsers: res.analytics.activeUsers || prev.activeUsers,
-            completedUsers: res.analytics.completedUsers || prev.completedUsers,
-            averageProgress: res.analytics.averageProgress || prev.averageProgress,
-            averageQuizScore: res.analytics.averageQuizScore || prev.averageQuizScore,
-          }));
-        }
-      } catch {
-        // fallback to mock
-      }
-    };
-    fetchAnalytics();
-  }, []);
 
   return (
     <div className="space-y-6">
@@ -93,7 +70,7 @@ export default function AdminDashboard() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
         <StatCard
           title="Total Cohort"
-          value={stats.totalUsers}
+          value={mockAdminStats.totalUsers}
           subtext="Registered new hires"
           icon={Users}
           iconBg="bg-blue-50 text-blue-600"
@@ -101,7 +78,7 @@ export default function AdminDashboard() {
 
         <StatCard
           title="Active Learners"
-          value={stats.activeUsers}
+          value={mockAdminStats.activeUsers}
           subtext="Active in past 24 hrs"
           icon={UserCheck}
           iconBg="bg-indigo-50 text-indigo-600"
@@ -109,7 +86,7 @@ export default function AdminDashboard() {
 
         <StatCard
           title="Graduated"
-          value={stats.completedUsers}
+          value={mockAdminStats.completedUsers}
           subtext="Day 15 completed"
           icon={CheckCircle2}
           iconBg="bg-emerald-50 text-emerald-600"
@@ -117,7 +94,7 @@ export default function AdminDashboard() {
 
         <StatCard
           title="Avg Progress"
-          value={`${stats.averageProgress}%`}
+          value={`${mockAdminStats.averageProgress}%`}
           subtext="Across active cohort"
           icon={TrendingUp}
           iconBg="bg-purple-50 text-purple-600"
@@ -125,7 +102,7 @@ export default function AdminDashboard() {
 
         <StatCard
           title="Avg Quiz Score"
-          value={`${stats.averageQuizScore}%`}
+          value={`${mockAdminStats.averageQuizScore}%`}
           subtext="Pre-joining tests"
           icon={Award}
           iconBg="bg-amber-50 text-amber-600"

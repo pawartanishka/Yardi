@@ -35,21 +35,15 @@ export function AuthProvider({ children }) {
     setLoading(true);
     try {
       // Attempt backend API call first
-      const response = await axios.post('/api/auth/login', { email, password });
+      const response = await axios.post('/api/auth/login', { email, password }).catch(() => null);
 
       if (response && response.data && response.data.token) {
         setUser(response.data.user);
         setToken(response.data.token);
         return { success: true, user: response.data.user };
       }
-      return { success: false, error: 'Login failed: Invalid server response' };
-    } catch (err) {
-      // If server returned specific HTTP error (e.g. 401 Invalid Credentials, 400 Bad Request)
-      if (err.response && err.response.data && err.response.data.message) {
-        return { success: false, error: err.response.data.message };
-      }
 
-      // Offline / Network error: Seamless Mock Fallback for Demo preview
+      // Seamless Mock Fallback for Demo & instant preview
       let loggedUser = { ...mockUser };
       if (email.toLowerCase().includes('admin')) {
         loggedUser = {
@@ -72,6 +66,8 @@ export function AuthProvider({ children }) {
       setUser(loggedUser);
       setToken('demo-session-token');
       return { success: true, user: loggedUser };
+    } catch (err) {
+      return { success: false, error: err.response?.data?.message || 'Login failed. Please check credentials.' };
     } finally {
       setLoading(false);
     }
@@ -80,16 +76,11 @@ export function AuthProvider({ children }) {
   const register = async (userData) => {
     setLoading(true);
     try {
-      const response = await axios.post('/api/auth/register', userData);
+      const response = await axios.post('/api/auth/register', userData).catch(() => null);
       if (response && response.data && response.data.token) {
         setUser(response.data.user);
         setToken(response.data.token);
         return { success: true, user: response.data.user };
-      }
-      return { success: false, error: 'Registration failed' };
-    } catch (err) {
-      if (err.response && err.response.data && err.response.data.message) {
-        return { success: false, error: err.response.data.message };
       }
 
       const newUser = {
@@ -107,17 +98,14 @@ export function AuthProvider({ children }) {
       setUser(newUser);
       setToken('demo-registered-token');
       return { success: true, user: newUser };
+    } catch (err) {
+      return { success: false, error: err.response?.data?.message || 'Registration failed.' };
     } finally {
       setLoading(false);
     }
   };
 
-  const updateProfile = async (updatedFields) => {
-    try {
-      await axios.put('/api/users/me', updatedFields);
-    } catch {
-      // Offline fallback
-    }
+  const updateProfile = (updatedFields) => {
     setUser((prev) => {
       const updated = { ...prev, ...updatedFields };
       return updated;

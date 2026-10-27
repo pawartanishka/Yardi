@@ -18,27 +18,12 @@ import Badge from '../../components/common/Badge';
 import Button from '../../components/common/Button';
 import Modal from '../../components/common/Modal';
 import { mockAdminStats } from '../../data/mockData';
-import { adminService } from '../../services/adminService';
 
 export default function AdminUsers() {
   const [usersList, setUsersList] = useState(mockAdminStats.recentUsers);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedDepartment, setSelectedDepartment] = useState('all');
   const [selectedUserModal, setSelectedUserModal] = useState(null);
-
-  React.useEffect(() => {
-    const fetchUsers = async () => {
-      try {
-        const res = await adminService.getUsers();
-        if (res && res.users && res.users.length > 0) {
-          setUsersList(res.users);
-        }
-      } catch {
-        // fallback to mock
-      }
-    };
-    fetchUsers();
-  }, []);
 
   const filteredUsers = usersList.filter((u) => {
     const matchesSearch =

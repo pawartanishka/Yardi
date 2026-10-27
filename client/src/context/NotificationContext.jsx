@@ -14,31 +14,6 @@ export function NotificationProvider({ children }) {
     localStorage.setItem('yardi_notifications', JSON.stringify(notifications));
   }, [notifications]);
 
-  useEffect(() => {
-    const fetchNotifications = async () => {
-      try {
-        const token = localStorage.getItem('yardi_token');
-        if (!token) return;
-        const res = await axios.get('/api/notifications').catch(() => null);
-        if (res && res.data && res.data.notifications && res.data.notifications.length > 0) {
-          setNotifications(
-            res.data.notifications.map((n) => ({
-              id: n._id ? n._id.toString() : n.id,
-              title: n.title,
-              message: n.message,
-              type: n.type,
-              read: n.read,
-              createdAt: n.createdAt,
-            }))
-          );
-        }
-      } catch {
-        // fallback
-      }
-    };
-    fetchNotifications();
-  }, []);
-
   const unreadCount = notifications.filter((n) => !n.read).length;
 
   const markAsRead = async (id) => {

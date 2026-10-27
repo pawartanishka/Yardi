@@ -8,7 +8,7 @@ import { useNotifications } from './NotificationContext';
 const JourneyContext = createContext();
 
 export function JourneyProvider({ children }) {
-  const { user, token, updateStats } = useAuth();
+  const { user, updateStats } = useAuth();
   const { addNotification } = useNotifications();
 
   const [days, setDays] = useState(() => {
@@ -48,16 +48,12 @@ export function JourneyProvider({ children }) {
         if (res && res.data && res.data.days && res.data.days.length > 0) {
           setDays(res.data.days);
         }
-        const badgeRes = await axios.get('/api/badges/me').catch(() => null);
-        if (badgeRes && badgeRes.data && badgeRes.data.badges && badgeRes.data.badges.length > 0) {
-          setBadges(badgeRes.data.badges);
-        }
       } catch {
         // fallback to existing state
       }
     };
     fetchJourney();
-  }, [token]);
+  }, []);
 
   const triggerConfetti = () => {
     try {
@@ -81,13 +77,6 @@ export function JourneyProvider({ children }) {
     const targetActivity = currentList.find((a) => a.id === activityId);
     if (!targetActivity || targetActivity.status === 'completed') {
       return { success: true, alreadyCompleted: true };
-    }
-
-    // Call backend API if connected
-    try {
-      await axios.post(`/api/activities/${activityId}/complete`).catch(() => null);
-    } catch {
-      // Offline fallback
     }
 
     const xpEarned = targetActivity.xp || 50;
