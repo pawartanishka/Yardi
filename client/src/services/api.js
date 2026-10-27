@@ -1,11 +1,11 @@
 import axios from 'axios';
 
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5000/api',
+  baseURL: import.meta.env.VITE_API_URL || '/api',
   headers: {
     'Content-Type': 'application/json',
   },
-  timeout: 10000,
+  timeout: 15000,
 });
 
 // Request Interceptor: Attach JWT Token
@@ -25,9 +25,15 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      // Auto logout on unauthorized if not on auth page
-      if (!window.location.pathname.includes('/login')) {
-        console.warn('Session expired or unauthorized. Redirecting to login.');
+      // Clear expired credentials
+      localStorage.removeItem('yardi_token');
+      localStorage.removeItem('yardi_user');
+
+      // Auto redirect to login if currently on a protected route
+      const publicPaths = ['/login', '/register', '/forgot-password'];
+      const isPublic = publicPaths.some((path) => window.location.pathname.startsWith(path));
+      if (!isPublic) {
+        window.location.href = '/login';
       }
     }
     return Promise.reject(error);

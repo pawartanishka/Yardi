@@ -26,6 +26,11 @@ const activityProgressSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
+    reflectionAnswer: {
+      type: String,
+      default: '',
+      trim: true,
+    },
     startedAt: {
       type: Date,
       default: Date.now,

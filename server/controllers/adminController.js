@@ -63,15 +63,15 @@ const getAdminAnalytics = async (req, res, next) => {
     const quizAttempts = await QuizAttempt.find();
     const avgQuizScore = quizAttempts.length > 0
       ? Math.round(quizAttempts.reduce((acc, q) => acc + (q.percentage || 0), 0) / quizAttempts.length)
-      : 89;
+      : 0;
 
     res.json({
       success: true,
       analytics: {
-        totalUsers: totalUsers || 148,
-        activeUsers: activeUsers || 132,
-        completedUsers: completedUsers || 45,
-        averageProgress: avgProgress || 68,
+        totalUsers,
+        activeUsers,
+        completedUsers,
+        averageProgress: avgProgress,
         averageQuizScore: avgQuizScore,
       },
     });
@@ -154,6 +154,18 @@ const deleteActivity = async (req, res, next) => {
   }
 };
 
+// @desc    Get all quizzes for admin
+// @route   GET /api/admin/quizzes
+// @access  Private (Admin)
+const getAdminQuizzes = async (req, res, next) => {
+  try {
+    const quizzes = await Quiz.find().sort({ createdAt: -1 });
+    res.json({ success: true, quizzes });
+  } catch (error) {
+    next(error);
+  }
+};
+
 // @desc    Create quiz
 // @route   POST /api/admin/quizzes
 // @access  Private (Admin)
@@ -166,13 +178,35 @@ const createQuiz = async (req, res, next) => {
   }
 };
 
+// @desc    Update user status (e.g. active / inactive)
+// @route   PUT /api/admin/users/:id/status
+// @access  Private (Admin)
+const updateUserStatus = async (req, res, next) => {
+  try {
+    const { status } = req.body;
+    const user = await User.findByIdAndUpdate(
+      req.params.id,
+      { status },
+      { new: true }
+    );
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+    res.json({ success: true, user });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   getAdminUsers,
   getAdminAnalytics,
+  updateUserStatus,
   createJourneyDay,
   updateJourneyDay,
   deleteJourneyDay,
   createActivity,
   deleteActivity,
+  getAdminQuizzes,
   createQuiz,
 };

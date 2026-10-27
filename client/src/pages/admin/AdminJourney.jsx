@@ -17,6 +17,7 @@ import Button from '../../components/common/Button';
 import Badge from '../../components/common/Badge';
 import Modal from '../../components/common/Modal';
 import { useJourney } from '../../context/JourneyContext';
+import api from '../../services/api';
 
 export default function AdminJourney() {
   const { days, setDays } = useJourney();
@@ -34,9 +35,15 @@ export default function AdminJourney() {
     setEditingDay({ ...day });
   };
 
-  const handleSaveEdit = () => {
+  const handleSaveEdit = async () => {
+    try {
+      const targetId = editingDay._id || editingDay.id;
+      await api.put(`/admin/days/${targetId}`, editingDay);
+    } catch (err) {
+      console.error('Failed to update day on server:', err);
+    }
     setDays((prev) =>
-      prev.map((d) => (d.id === editingDay.id ? editingDay : d))
+      prev.map((d) => (d.id === editingDay.id || d._id === editingDay._id ? editingDay : d))
     );
     setEditingDay(null);
   };
@@ -44,7 +51,7 @@ export default function AdminJourney() {
   const handleToggleLock = (dayId) => {
     setDays((prev) =>
       prev.map((d) => {
-        if (d.id === dayId) {
+        if (d.id === dayId || d._id === dayId) {
           const newStatus = d.status === 'locked' ? 'available' : 'locked';
           return { ...d, status: newStatus };
         }
@@ -53,28 +60,37 @@ export default function AdminJourney() {
     );
   };
 
-  const handleDeleteDay = (dayId) => {
+  const handleDeleteDay = async (dayId) => {
     if (window.confirm('Are you sure you want to delete this milestone?')) {
-      setDays((prev) => prev.filter((d) => d.id !== dayId));
+      try {
+        await api.delete(`/admin/days/${dayId}`);
+      } catch (err) {
+        console.error('Failed to delete day on server:', err);
+      }
+      setDays((prev) => prev.filter((d) => d.id !== dayId && d._id !== dayId));
     }
   };
 
-  const handleCreateDay = (e) => {
+  const handleCreateDay = async (e) => {
     e.preventDefault();
     const newDay = {
-      id: `day-${dayNumber}`,
       dayNumber: Number(dayNumber),
       title,
       description,
       estimatedTime,
       xp: Number(xp),
-      status: 'locked',
-      activitiesCount: 4,
-      completedCount: 0,
       order: Number(dayNumber),
     };
 
-    setDays((prev) => [...prev, newDay]);
+    try {
+      const res = await api.post('/admin/days', newDay);
+      const created = res.data?.day || { ...newDay, id: `day-${dayNumber}` };
+      setDays((prev) => [...prev, created]);
+    } catch (err) {
+      console.error('Failed to create day on server:', err);
+      setDays((prev) => [...prev, { ...newDay, id: `day-${dayNumber}`, status: 'locked' }]);
+    }
+
     setIsCreateModalOpen(false);
     setTitle('');
     setDescription('');

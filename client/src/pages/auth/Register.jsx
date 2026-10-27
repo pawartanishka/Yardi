@@ -45,7 +45,7 @@ export default function Register() {
             Account Activation
           </h2>
           <p className="text-xs text-slate-500">
-            Set up your password and profile for YARDI LaunchPad
+            Set up your password and profile for YARDI Portal
           </p>
         </div>
 

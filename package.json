@@ -8,6 +8,10 @@
     "server": "npm --prefix server run dev",
     "client": "npm --prefix client run dev",
     "seed": "npm --prefix server run seed",
+    "init:curriculum": "npm --prefix server run init:curriculum",
+    "clean:demo": "npm --prefix server run clean:demo",
+    "create:admin": "npm --prefix server run create:admin",
+    "test:e2e": "npm --prefix server run test:e2e",
     "install:all": "npm install && npm --prefix server install && npm --prefix client install"
   },
   "keywords": [

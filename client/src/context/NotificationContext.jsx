@@ -1,27 +1,39 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import axios from 'axios';
-import { mockNotifications } from '../data/mockData';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import api from '../services/api';
 
 const NotificationContext = createContext();
 
 export function NotificationProvider({ children }) {
-  const [notifications, setNotifications] = useState(() => {
-    const saved = localStorage.getItem('yardi_notifications');
-    return saved ? JSON.parse(saved) : mockNotifications;
-  });
+  const [notifications, setNotifications] = useState([]);
+
+  const fetchNotifications = useCallback(async () => {
+    const token = localStorage.getItem('yardi_token');
+    if (!token) {
+      setNotifications([]);
+      return;
+    }
+    try {
+      const res = await api.get('/notifications');
+      if (res.data && res.data.notifications) {
+        setNotifications(res.data.notifications);
+      }
+    } catch {
+      // ignore
+    }
+  }, []);
 
   useEffect(() => {
-    localStorage.setItem('yardi_notifications', JSON.stringify(notifications));
-  }, [notifications]);
+    fetchNotifications();
+  }, [fetchNotifications]);
 
   const unreadCount = notifications.filter((n) => !n.read).length;
 
   const markAsRead = async (id) => {
     setNotifications((prev) =>
-      prev.map((n) => (n.id === id ? { ...n, read: true } : n))
+      prev.map((n) => (n._id === id || n.id === id ? { ...n, read: true } : n))
     );
     try {
-      await axios.put(`/api/notifications/${id}/read`).catch(() => null);
+      await api.put(`/notifications/${id}/read`);
     } catch {
       // ignore
     }
@@ -30,20 +42,10 @@ export function NotificationProvider({ children }) {
   const markAllAsRead = async () => {
     setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
     try {
-      await axios.put('/api/notifications/read-all').catch(() => null);
+      await api.put('/notifications/read-all');
     } catch {
       // ignore
     }
-  };
-
-  const addNotification = (notif) => {
-    const newNotif = {
-      id: `notif-${Date.now()}`,
-      createdAt: new Date().toISOString(),
-      read: false,
-      ...notif,
-    };
-    setNotifications((prev) => [newNotif, ...prev]);
   };
 
   return (
@@ -53,7 +55,7 @@ export function NotificationProvider({ children }) {
         unreadCount,
         markAsRead,
         markAllAsRead,
-        addNotification,
+        fetchNotifications,
       }}
     >
       {children}

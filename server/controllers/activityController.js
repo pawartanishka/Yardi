@@ -64,6 +64,10 @@ const completeActivity = async (req, res, next) => {
       });
     }
 
+    if (req.body.reflectionAnswer) {
+      progress.reflectionAnswer = req.body.reflectionAnswer.trim();
+    }
+
     progress.status = 'completed';
     progress.completedAt = new Date();
     await progress.save();

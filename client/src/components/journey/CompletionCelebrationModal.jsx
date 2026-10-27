@@ -68,7 +68,7 @@ export default function CompletionCelebrationModal({ isOpen, onClose }) {
             Congratulations, {user?.name || 'Explorer'}! 🎉
           </h2>
           <p className="text-sm text-slate-600 mb-8 max-w-sm mx-auto leading-relaxed">
-            You have successfully completed your <span className="font-semibold text-slate-800">15-Day LaunchPad Pre-Joining Journey</span> at Yardi. You are primed and ready for Day 1!
+            You have successfully completed your <span className="font-semibold text-slate-800">15-Day Pre-Joining Journey</span> at Yardi. You are primed and ready for Day 1!
           </p>
 
           {/* Stats Summary Grid */}

@@ -43,19 +43,7 @@ export default function Login() {
     }
   };
 
-  const handleDemoUser = async () => {
-    setEmail('user@yardi.com');
-    setPassword('User@123');
-    const res = await login('user@yardi.com', 'User@123');
-    if (res.success) navigate('/dashboard');
-  };
 
-  const handleDemoAdmin = async () => {
-    setEmail('admin@yardi.com');
-    setPassword('Admin@123');
-    const res = await login('admin@yardi.com', 'Admin@123');
-    if (res.success) navigate('/admin');
-  };
 
   return (
     <div className="min-h-screen w-full flex bg-slate-50">
@@ -68,9 +56,6 @@ export default function Login() {
         {/* Brand header */}
         <div className="relative z-10 flex items-center gap-3">
           <YardiLogo className="h-8" variant="white" />
-          <span className="text-[10px] bg-blue-500/20 text-blue-300 font-semibold px-2 py-0.5 rounded-full border border-blue-400/20">
-            Enterprise LaunchPad
-          </span>
         </div>
 
         {/* Center Motivational Content */}
@@ -85,7 +70,7 @@ export default function Login() {
           </h2>
 
           <p className="text-base text-slate-300 leading-relaxed">
-            Complete your 15-Day LaunchPad journey, master squad workflows, earn achievement badges, and get completely primed for your first day.
+            Complete your 15-day pre-joining journey, master squad workflows, earn achievement badges, and get completely primed for your first day.
           </p>
 
           {/* Value props bullet list */}
@@ -125,11 +110,8 @@ export default function Login() {
       <div className="flex-1 flex flex-col justify-center px-6 sm:px-12 lg:px-16 py-12">
         <div className="w-full max-w-md mx-auto space-y-8">
           {/* Mobile Header */}
-          <div className="lg:hidden flex items-center justify-between mb-6">
+          <div className="lg:hidden flex items-center justify-start mb-6">
             <YardiLogo className="h-7" variant="blue" />
-            <span className="text-[10px] bg-blue-100 text-blue-800 font-bold px-2 py-0.5 rounded-full">
-              LaunchPad
-            </span>
           </div>
 
           <div>
@@ -141,33 +123,7 @@ export default function Login() {
             </p>
           </div>
 
-          {/* Quick Demo Login Triggers */}
-          <div className="p-3.5 rounded-2xl bg-blue-50/70 border border-blue-200/80 space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] font-bold text-blue-900 uppercase tracking-wider">
-                Quick Demo Access:
-              </span>
-              <span className="text-[10px] text-blue-600 font-medium">One-click sign-in</span>
-            </div>
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                type="button"
-                onClick={handleDemoUser}
-                className="px-3 py-2 rounded-xl bg-white border border-blue-200 hover:border-blue-400 hover:shadow-xs text-xs font-bold text-blue-700 transition-all text-left"
-              >
-                <div>Learner Demo</div>
-                <div className="text-[10px] text-slate-400 font-normal">user@yardi.com</div>
-              </button>
-              <button
-                type="button"
-                onClick={handleDemoAdmin}
-                className="px-3 py-2 rounded-xl bg-white border border-purple-200 hover:border-purple-400 hover:shadow-xs text-xs font-bold text-purple-700 transition-all text-left"
-              >
-                <div>Admin Demo</div>
-                <div className="text-[10px] text-slate-400 font-normal">admin@yardi.com</div>
-              </button>
-            </div>
-          </div>
+
 
           {error && (
             <div className="p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-xs font-semibold text-rose-700">
@@ -245,7 +201,7 @@ export default function Login() {
               icon={ArrowRight}
               iconPosition="right"
             >
-              Sign In to LaunchPad
+              Sign In to Yardi Portal
             </Button>
           </form>
 

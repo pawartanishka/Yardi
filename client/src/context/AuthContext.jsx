@@ -1,73 +1,74 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import axios from 'axios';
-import { mockUser } from '../data/mockData';
+import api from '../services/api';
 
 const AuthContext = createContext();
 
 export function AuthProvider({ children }) {
+  const [token, setToken] = useState(() => localStorage.getItem('yardi_token') || null);
   const [user, setUser] = useState(() => {
     const saved = localStorage.getItem('yardi_user');
-    return saved ? JSON.parse(saved) : mockUser;
+    try {
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
   });
-  const [token, setToken] = useState(() => localStorage.getItem('yardi_token') || 'demo-jwt-token');
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
 
-  // Sync token to Axios default authorization header
+  // Validate session on mount if token exists
   useEffect(() => {
-    if (token) {
-      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-      localStorage.setItem('yardi_token', token);
-    } else {
-      delete axios.defaults.headers.common['Authorization'];
-      localStorage.removeItem('yardi_token');
-    }
-  }, [token]);
+    const verifySession = async () => {
+      const storedToken = localStorage.getItem('yardi_token');
+      if (!storedToken) {
+        setUser(null);
+        setToken(null);
+        setLoading(false);
+        return;
+      }
 
-  useEffect(() => {
-    if (user) {
-      localStorage.setItem('yardi_user', JSON.stringify(user));
-    } else {
-      localStorage.removeItem('yardi_user');
-    }
-  }, [user]);
+      try {
+        const response = await api.get('/auth/me');
+        if (response.data && response.data.user) {
+          setUser(response.data.user);
+          localStorage.setItem('yardi_user', JSON.stringify(response.data.user));
+        } else {
+          logout();
+        }
+      } catch (err) {
+        // Token expired or invalid
+        logout();
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    verifySession();
+  }, []);
 
   const login = async (email, password) => {
     setLoading(true);
     try {
-      // Attempt backend API call first
-      const response = await axios.post('/api/auth/login', { email, password }).catch(() => null);
+      const response = await api.post('/auth/login', { email, password });
 
-      if (response && response.data && response.data.token) {
-        setUser(response.data.user);
-        setToken(response.data.token);
-        return { success: true, user: response.data.user };
+      if (response.data && response.data.token) {
+        const authenticatedUser = response.data.user;
+        const authToken = response.data.token;
+
+        setUser(authenticatedUser);
+        setToken(authToken);
+
+        localStorage.setItem('yardi_token', authToken);
+        localStorage.setItem('yardi_user', JSON.stringify(authenticatedUser));
+
+        return { success: true, user: authenticatedUser };
       }
 
-      // Seamless Mock Fallback for Demo & instant preview
-      let loggedUser = { ...mockUser };
-      if (email.toLowerCase().includes('admin')) {
-        loggedUser = {
-          ...mockUser,
-          id: 'admin-1',
-          name: 'Sarah Connor',
-          email: 'admin@yardi.com',
-          role: 'admin',
-          department: 'Talent & Organizational Development',
-        };
-      } else {
-        loggedUser = {
-          ...mockUser,
-          email: email || 'alex.rivera@yardi.com',
-          name: email.split('@')[0].replace('.', ' ').replace(/\b\w/g, l => l.toUpperCase()),
-          role: 'user',
-        };
-      }
-
-      setUser(loggedUser);
-      setToken('demo-session-token');
-      return { success: true, user: loggedUser };
+      return { success: false, error: 'Authentication failed. Please verify your credentials.' };
     } catch (err) {
-      return { success: false, error: err.response?.data?.message || 'Login failed. Please check credentials.' };
+      return {
+        success: false,
+        error: err.response?.data?.message || 'Invalid email or password. Please try again.',
+      };
     } finally {
       setLoading(false);
     }
@@ -76,56 +77,62 @@ export function AuthProvider({ children }) {
   const register = async (userData) => {
     setLoading(true);
     try {
-      const response = await axios.post('/api/auth/register', userData).catch(() => null);
-      if (response && response.data && response.data.token) {
-        setUser(response.data.user);
-        setToken(response.data.token);
-        return { success: true, user: response.data.user };
+      const response = await api.post('/auth/register', userData);
+
+      if (response.data && response.data.token) {
+        const registeredUser = response.data.user;
+        const authToken = response.data.token;
+
+        setUser(registeredUser);
+        setToken(authToken);
+
+        localStorage.setItem('yardi_token', authToken);
+        localStorage.setItem('yardi_user', JSON.stringify(registeredUser));
+
+        return { success: true, user: registeredUser };
       }
 
-      const newUser = {
-        ...mockUser,
-        id: `user-${Date.now()}`,
-        name: userData.name,
-        email: userData.email,
-        department: userData.department || 'Cloud Solutions',
-        role: 'user',
-        currentDay: 1,
-        xp: 0,
-        overallProgress: 0,
-      };
-
-      setUser(newUser);
-      setToken('demo-registered-token');
-      return { success: true, user: newUser };
+      return { success: false, error: 'Registration failed.' };
     } catch (err) {
-      return { success: false, error: err.response?.data?.message || 'Registration failed.' };
+      return {
+        success: false,
+        error: err.response?.data?.message || 'Registration failed. Email may already be registered.',
+      };
     } finally {
       setLoading(false);
     }
   };
 
-  const updateProfile = (updatedFields) => {
-    setUser((prev) => {
-      const updated = { ...prev, ...updatedFields };
-      return updated;
-    });
+  const updateProfile = async (updatedFields) => {
+    try {
+      const response = await api.put('/users/me', updatedFields);
+      if (response.data && response.data.user) {
+        const updated = response.data.user;
+        setUser(updated);
+        localStorage.setItem('yardi_user', JSON.stringify(updated));
+        return { success: true, user: updated };
+      }
+      return { success: false, error: 'Failed to update profile' };
+    } catch (err) {
+      return {
+        success: false,
+        error: err.response?.data?.message || 'Error updating profile',
+      };
+    }
   };
 
-  const updateStats = ({ xpGained, dayCompleted, currentDay }) => {
+  const updateStats = ({ xpGained, currentDay, currentStreak, overallProgress }) => {
     setUser((prev) => {
-      const newXp = (prev?.xp || 0) + (xpGained || 0);
-      const newTodayXp = (prev?.todayXp || 0) + (xpGained || 0);
-      const nextDay = currentDay !== undefined ? currentDay : prev?.currentDay || 5;
-      const progress = Math.min(100, Math.round((nextDay / 15) * 100));
-
-      return {
+      if (!prev) return prev;
+      const updated = {
         ...prev,
-        xp: newXp,
-        todayXp: newTodayXp,
-        currentDay: nextDay,
-        overallProgress: progress,
+        xp: xpGained !== undefined ? (prev.xp || 0) + xpGained : prev.xp,
+        currentDay: currentDay !== undefined ? currentDay : prev.currentDay,
+        currentStreak: currentStreak !== undefined ? currentStreak : prev.currentStreak,
+        overallProgress: overallProgress !== undefined ? overallProgress : prev.overallProgress,
       };
+      localStorage.setItem('yardi_user', JSON.stringify(updated));
+      return updated;
     });
   };
 
@@ -134,6 +141,10 @@ export function AuthProvider({ children }) {
     setToken(null);
     localStorage.removeItem('yardi_user');
     localStorage.removeItem('yardi_token');
+    localStorage.removeItem('yardi_journey_days');
+    localStorage.removeItem('yardi_activities_map');
+    localStorage.removeItem('yardi_badges');
+    localStorage.removeItem('yardi_notifications');
   };
 
   return (

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   CheckSquare,
   Plus,
@@ -16,11 +16,11 @@ import Card from '../../components/common/Card';
 import Button from '../../components/common/Button';
 import Badge from '../../components/common/Badge';
 import Modal from '../../components/common/Modal';
-import { mockDayActivities } from '../../data/mockData';
+import api from '../../services/api';
 
 export default function AdminActivities() {
-  const [activitiesMap, setActivitiesMap] = useState(mockDayActivities);
-  const [selectedDay, setSelectedDay] = useState('day-5');
+  const [activitiesMap, setActivitiesMap] = useState({});
+  const [selectedDay, setSelectedDay] = useState('day-1');
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   // Form State
@@ -31,12 +31,30 @@ export default function AdminActivities() {
   const [xp, setXp] = useState(80);
   const [isRequired, setIsRequired] = useState(true);
 
+  useEffect(() => {
+    const fetchActivities = async () => {
+      try {
+        const res = await api.get(`/journey/${selectedDay}`);
+        if (res.data?.success && res.data.activities) {
+          setActivitiesMap((prev) => ({
+            ...prev,
+            [selectedDay]: res.data.activities,
+          }));
+        }
+      } catch (err) {
+        console.error('Failed to fetch activities for day:', err);
+      }
+    };
+    fetchActivities();
+  }, [selectedDay]);
+
   const activities = activitiesMap[selectedDay] || [];
 
-  const handleCreateActivity = (e) => {
+  const handleCreateActivity = async (e) => {
     e.preventDefault();
-    const newAct = {
-      id: `act-${Date.now()}`,
+    const actId = `act-${Date.now()}`;
+    const payload = {
+      activityId: actId,
       dayId: selectedDay,
       title,
       description,
@@ -48,21 +66,36 @@ export default function AdminActivities() {
       status: 'pending',
     };
 
-    setActivitiesMap((prev) => ({
-      ...prev,
-      [selectedDay]: [...(prev[selectedDay] || []), newAct],
-    }));
+    try {
+      const res = await api.post('/admin/activities', payload);
+      const created = res.data?.activity || { ...payload, id: actId };
+      setActivitiesMap((prev) => ({
+        ...prev,
+        [selectedDay]: [...(prev[selectedDay] || []), created],
+      }));
+    } catch (err) {
+      console.error('Failed to create activity on server:', err);
+      setActivitiesMap((prev) => ({
+        ...prev,
+        [selectedDay]: [...(prev[selectedDay] || []), { ...payload, id: actId }],
+      }));
+    }
 
     setIsModalOpen(false);
     setTitle('');
     setDescription('');
   };
 
-  const handleDeleteActivity = (actId) => {
+  const handleDeleteActivity = async (actId) => {
     if (window.confirm('Delete this activity module?')) {
+      try {
+        await api.delete(`/admin/activities/${actId}`);
+      } catch (err) {
+        console.error('Failed to delete activity on server:', err);
+      }
       setActivitiesMap((prev) => ({
         ...prev,
-        [selectedDay]: prev[selectedDay].filter((a) => a.id !== actId),
+        [selectedDay]: (prev[selectedDay] || []).filter((a) => a.id !== actId && a._id !== actId),
       }));
     }
   };

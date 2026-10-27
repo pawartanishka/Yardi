@@ -92,38 +92,57 @@ Instead of traditional static PDF handbooks or dry email attachments, **LaunchPa
 
 ```
 Yardi/
-├── client/                     # Frontend Application (React + Vite)
-│   ├── public/                 # Static assets
+├── client/                     # Frontend Application (React + Vite + Tailwind CSS)
+│   ├── public/                 # Static assets & brand favicon
 │   ├── src/
-│   │   ├── assets/             # Images and design graphics
-│   │   ├── components/         # Reusable UI components (Sidebar, Navbar, Cards, Badges)
-│   │   ├── context/            # AuthContext and state providers
-│   │   ├── data/               # Static fallbacks and constants
+│   │   ├── assets/             # Brand logos & design graphics
+│   │   ├── components/         # Reusable UI components
+│   │   │   ├── activities/     # Video, Reading, Reflection, Scenario modules
+│   │   │   ├── common/         # Button, Card, Badge, Modal, BadgeMedallion, YardiLogo
+│   │   │   ├── dashboard/      # Learner analytics & widgets
+│   │   │   ├── journey/        # 15-day timeline & completion modals
+│   │   │   ├── layout/         # AppLayout, Navbar, Sidebar
+│   │   │   └── quiz/           # Server-graded QuizPlayer
+│   │   ├── context/            # AuthContext, JourneyContext, NotificationContext
+│   │   ├── data/               # Static catalogue definitions
 │   │   ├── pages/
-│   │   │   ├── admin/          # Admin pages (Dashboard, Users, Journey, Activities, Quizzes)
-│   │   │   ├── auth/           # Login, Register, Forgot Password
-│   │   │   └── user/           # Learner pages (Dashboard, Journey, DayDetails, Progress, etc.)
-│   │   ├── routes/             # ProtectedRoute and AppRoutes definition
-│   │   ├── services/           # Axios API services
-│   │   ├── App.jsx             # Main App layout
-│   │   └── index.css           # Global stylesheet & Tailwind directives
+│   │   │   ├── admin/          # Admin oversight (Dashboard, Users, Journey, Activities, Quizzes, Analytics)
+│   │   │   ├── auth/           # Authentication (Login, Register, Forgot Password)
+│   │   │   └── user/           # Learner portal (Dashboard, Journey, DayDetails, Achievements, Progress, Profile)
+│   │   ├── routes/             # AppRoutes and ProtectedRoute RBAC guards
+│   │   ├── services/           # Centralized Axios API client (auth headers, 401 handling)
+│   │   ├── App.jsx             # Top-level application component
+│   │   └── index.css           # Global typography & design system tokens
 │   ├── package.json
 │   └── vite.config.js
 │
-├── server/                     # Backend API (Node.js + Express + Mongoose)
-│   ├── config/                 # Database connection config
-│   ├── controllers/            # Route business logic (Auth, Journey, Activities, Quizzes, etc.)
-│   ├── middleware/             # Auth & Role verification middleware
-│   ├── models/                 # Mongoose schemas (User, JourneyDay, Activity, Quiz, Badge, etc.)
-│   ├── routes/                 # Express API routes
-│   ├── seed/                   # Database seeder (sample users, 15 days, Day 5 activities)
-│   ├── utils/                  # Token generators, streak calculators, badge assigners
-│   ├── server.js               # Express app entry point
-│   ├── package.json
-│   └── .env.example            # Environment variable template
+├── docs/                       # Architecture, Planning & Project Documentation
+│   ├── AUDIT_AND_PLAN.md       # Full-stack production audit & migration roadmap
+│   └── TODO.md                 # Development sprint notes & tracker
 │
-├── package.json                # Root package with monorepo scripts
-└── README.md                   # Project documentation
+├── server/                     # Backend API (Node.js + Express + Mongoose)
+│   ├── config/                 # Centralized MongoDB connection configuration
+│   ├── controllers/            # Route controllers (Auth, Journey, Activities, Quizzes, Progress, Admin)
+│   ├── middleware/             # Authentication & Admin RBAC verification guards
+│   ├── models/                 # Mongoose schemas (User, JourneyDay, Activity, ActivityProgress, Quiz, Badge, etc.)
+│   ├── routes/                 # Express REST API routes
+│   ├── scripts/                # Database management CLI utilities
+│   │   ├── cleanDemoData.js    # Controlled demo data cleaner (--dry-run / --execute)
+│   │   ├── createAdmin.js      # Secure administrator provisioning script
+│   │   ├── initCurriculum.js   # Idempotent 15-day curriculum & badge initializer
+│   │   └── seedData.js         # Isolated development seed script (production locked)
+│   ├── tests/                  # Automated test suites
+│   │   └── testE2E.js          # Comprehensive 43-point end-to-end test suite
+│   ├── utils/                  # Helper utilities (token generator, streak calculator, badge assigner)
+│   ├── server.js               # Express application entry point & startup validation
+│   ├── package.json            # Server dependencies & CLI scripts
+│   ├── .env                    # Environment variables (git-ignored)
+│   └── .env.example            # Environment template without secrets
+│
+├── .gitignore                  # Git ignore rules (.env, node_modules, dist)
+├── package.json                # Root monorepo orchestration scripts
+├── package-lock.json
+└── README.md                   # Project overview & documentation
 ```
 
 ---
@@ -140,7 +159,7 @@ Ensure you have the following installed on your machine:
 
 ### 2. Installation
 
-Clone the repository and install all dependencies for the root, server, and client:
+Clone the repository and install all dependencies for root, server, and client:
 
 ```bash
 # Clone the repository
@@ -162,49 +181,72 @@ Configure the backend environment variables in `server/.env`:
 ```env
 PORT=5000
 MONGO_URI=mongodb://127.0.0.1:27017/yardi_launchpad
-JWT_SECRET=yardi_launchpad_jwt_secret_key_2026_super_secure
-JWT_EXPIRE=30d
+JWT_SECRET=your_production_secret_key_here
+CLIENT_URL=http://localhost:5173
 NODE_ENV=development
 ```
 
 ---
 
-### 4. Database Seeding (Sample Data)
+### 4. Curriculum Initialization & Admin Setup
 
-Populate the database with pre-configured demo users, 15-day journey metadata, Day 5 interactive content, quizzes, and badges:
+1. **Initialize Shared Curriculum**:
+   Populate all 15 journey days, 22 interactive curriculum activities, pre-boarding quizzes, and badges into MongoDB:
+   ```bash
+   npm run init:curriculum
+   ```
+
+2. **Provision the First Administrator**:
+   Create a secure administrative account with salt-hashed password:
+   ```bash
+   node server/scripts/createAdmin.js --email admin@yardi.com --password YourAdminPassword123! --name "Sarah Connor" --department "Talent Development"
+   ```
+
+3. *(Optional)* **Clean Demo Data**:
+   Preview or purge legacy demo users from MongoDB safely:
+   ```bash
+   # Preview:
+   node server/scripts/cleanDemoData.js --dry-run
+
+   # Execute:
+   node server/scripts/cleanDemoData.js --execute
+   ```
+
+---
+
+### 5. Running Tests
+
+Run the comprehensive 43-point end-to-end verification suite:
 
 ```bash
-npm run seed
+npm run test:e2e
 ```
 
 ---
 
-### 5. Running the Application
+### 6. Running the Application
 
-Launch both the Express backend and React Vite frontend concurrently with a single command:
+Launch both the Express backend and React Vite frontend concurrently:
 
 ```bash
 npm run dev
 ```
 
-- **Frontend**: Accessible at [http://localhost:5173](http://localhost:5173)
-- **Backend API**: Accessible at [http://localhost:5000](http://localhost:5000)
+- **Frontend**: [http://localhost:5173](http://localhost:5173)
+- **Backend API**: [http://localhost:5000](http://localhost:5000)
 
 ---
 
-## 🔑 Demo Credentials
-
-Once the seed script has run, use the following pre-configured accounts:
+## 🔑 Account Access
 
 ### 🎓 Learner Account (New Hire)
-- **Email**: `user@yardi.com`
-- **Password**: `User@123`
-- *Access*: Learner Dashboard, 15-Day Roadmap, Interactive Lessons, Quizzes, Badges, Streaks.
+- **Self-Registration**: New hires register via the `/register` page.
+- Initialized on **Day 1** with **0 XP**, **0 streak**, and **0 badges**.
+- Sequential unlocking of milestones as daily activities are completed.
 
 ### 🛡️ Admin Account (HR / Talent Lead)
-- **Email**: `admin@yardi.com`
-- **Password**: `Admin@123`
-- *Access*: Admin Dashboard, Analytics, User Progress Monitoring, Journey & Activity Management.
+- Provisioned via `node server/scripts/createAdmin.js`.
+- Full access to Admin Dashboard, cohort velocity analytics, learner dossier management, curriculum builder, and quizzes.
 
 ---
 

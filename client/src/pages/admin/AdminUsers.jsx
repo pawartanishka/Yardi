@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Users,
   Search,
@@ -11,19 +11,37 @@ import {
   ToggleLeft,
   ToggleRight,
   Mail,
-  UserCheck
+  UserCheck,
+  Loader2
 } from 'lucide-react';
 import Card from '../../components/common/Card';
 import Badge from '../../components/common/Badge';
 import Button from '../../components/common/Button';
 import Modal from '../../components/common/Modal';
-import { mockAdminStats } from '../../data/mockData';
+import api from '../../services/api';
 
 export default function AdminUsers() {
-  const [usersList, setUsersList] = useState(mockAdminStats.recentUsers);
+  const [usersList, setUsersList] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedDepartment, setSelectedDepartment] = useState('all');
   const [selectedUserModal, setSelectedUserModal] = useState(null);
+
+  useEffect(() => {
+    const fetchUsers = async () => {
+      try {
+        const res = await api.get('/admin/users');
+        if (res.data?.success) {
+          setUsersList(res.data.users);
+        }
+      } catch (err) {
+        console.error('Failed to fetch admin users:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchUsers();
+  }, []);
 
   const filteredUsers = usersList.filter((u) => {
     const matchesSearch =
@@ -34,19 +52,22 @@ export default function AdminUsers() {
     return matchesSearch && matchesDept;
   });
 
-  const toggleUserStatus = (userId) => {
-    setUsersList((prev) =>
-      prev.map((u) => {
-        if (u.id === userId) {
-          const newStatus = u.status === 'active' ? 'inactive' : 'active';
-          return { ...u, status: newStatus };
-        }
-        return u;
-      })
-    );
+  const toggleUserStatus = async (userId) => {
+    const targetUser = usersList.find((u) => u.id === userId);
+    if (!targetUser) return;
+    const newStatus = targetUser.status === 'active' ? 'inactive' : 'active';
+
+    try {
+      await api.put(`/admin/users/${userId}/status`, { status: newStatus });
+      setUsersList((prev) =>
+        prev.map((u) => (u.id === userId ? { ...u, status: newStatus } : u))
+      );
+    } catch (err) {
+      console.error('Failed to update user status:', err);
+    }
   };
 
-  const departments = ['all', ...new Set(usersList.map((u) => u.department))];
+  const departments = ['all', ...new Set(usersList.map((u) => u.department || 'General'))];
 
   return (
     <div className="space-y-6">
@@ -112,12 +133,19 @@ export default function AdminUsers() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
-              {filteredUsers.map((user) => (
-                <tr key={user.id} className="hover:bg-slate-50/70 transition-colors">
-                  <td className="py-3.5 px-5">
-                    <div className="font-bold text-slate-900">{user.name}</div>
-                    <div className="text-[10px] text-slate-400 font-normal">{user.email}</div>
+              {filteredUsers.length === 0 ? (
+                <tr>
+                  <td colSpan="8" className="py-8 text-center text-xs text-slate-400">
+                    No users found matching your filters.
                   </td>
+                </tr>
+              ) : (
+                filteredUsers.map((user) => (
+                  <tr key={user.id} className="hover:bg-slate-50/70 transition-colors">
+                    <td className="py-3.5 px-5">
+                      <div className="font-bold text-slate-900">{user.name}</div>
+                      <div className="text-[10px] text-slate-400 font-normal">{user.email}</div>
+                    </td>
                   <td className="py-3.5 px-4">{user.department}</td>
                   <td className="py-3.5 px-4">
                     <Badge variant={user.role === 'admin' ? 'purple' : 'default'}>
@@ -175,7 +203,7 @@ export default function AdminUsers() {
                     </div>
                   </td>
                 </tr>
-              ))}
+              )))}
             </tbody>
           </table>
         </div>

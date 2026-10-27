@@ -57,6 +57,7 @@ const registerUser = async (req, res, next) => {
         currentDay: user.currentDay,
         xp: user.xp,
         currentStreak: user.currentStreak,
+        streak: user.currentStreak,
         overallProgress: user.overallProgress,
       },
     });
@@ -108,6 +109,7 @@ const loginUser = async (req, res, next) => {
         xp: user.xp,
         todayXp: user.todayXp,
         currentStreak: user.currentStreak,
+        streak: user.currentStreak,
         longestStreak: user.longestStreak,
         overallProgress: user.overallProgress,
       },

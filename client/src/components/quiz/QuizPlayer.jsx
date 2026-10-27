@@ -13,12 +13,15 @@ import Button from '../common/Button';
 import Card from '../common/Card';
 import Badge from '../common/Badge';
 import confetti from 'canvas-confetti';
+import api from '../../services/api';
 
 export default function QuizPlayer({ quiz, onComplete, onClose }) {
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [selectedAnswers, setSelectedAnswers] = useState({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
-  const [score, setScore] = useState(0);
+  const [submitError, setSubmitError] = useState('');
+  const [resultData, setResultData] = useState(null);
 
   if (!quiz || !quiz.questions || quiz.questions.length === 0) {
     return (
@@ -33,43 +36,52 @@ export default function QuizPlayer({ quiz, onComplete, onClose }) {
   const isLastQuestion = currentQuestionIndex === totalQuestions - 1;
 
   const handleSelectOption = (optionIndex) => {
-    if (isSubmitted) return;
+    if (isSubmitted || isSubmitting) return;
     setSelectedAnswers({
       ...selectedAnswers,
       [currentQuestionIndex]: optionIndex,
     });
   };
 
-  const handleSubmitQuiz = () => {
-    let correctCount = 0;
-    quiz.questions.forEach((q, idx) => {
-      if (selectedAnswers[idx] === q.correctAnswer) {
-        correctCount += 1;
-      }
-    });
+  const handleSubmitQuiz = async () => {
+    setIsSubmitting(true);
+    setSubmitError('');
 
-    setScore(correctCount);
-    setIsSubmitted(true);
-
-    const percentage = Math.round((correctCount / totalQuestions) * 100);
-    const passed = percentage >= (quiz.passingScore || 70);
-
-    if (passed) {
-      try {
-        confetti({
-          particleCount: 80,
-          spread: 60,
-          origin: { y: 0.7 },
-        });
-      } catch {
-        // ignore
-      }
-      onComplete({
-        score: correctCount,
-        total: totalQuestions,
-        percentage,
-        xp: quiz.xp || 100,
+    try {
+      const quizIdentifier = quiz.id || quiz.quizId;
+      const res = await api.post(`/quizzes/${quizIdentifier}/submit`, {
+        answers: selectedAnswers,
       });
+
+      if (res.data && res.data.success) {
+        setResultData(res.data);
+        setIsSubmitted(true);
+
+        if (res.data.passed) {
+          try {
+            confetti({
+              particleCount: 90,
+              spread: 65,
+              origin: { y: 0.7 },
+            });
+          } catch {
+            // ignore
+          }
+
+          if (onComplete) {
+            onComplete({
+              score: res.data.score,
+              total: res.data.total,
+              percentage: res.data.percentage,
+              xp: res.data.xpEarned,
+            });
+          }
+        }
+      }
+    } catch (err) {
+      setSubmitError(err.response?.data?.message || 'Failed to submit quiz. Please try again.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -77,11 +89,15 @@ export default function QuizPlayer({ quiz, onComplete, onClose }) {
     setSelectedAnswers({});
     setIsSubmitted(false);
     setCurrentQuestionIndex(0);
-    setScore(0);
+    setResultData(null);
+    setSubmitError('');
   };
 
-  const percentage = Math.round((score / totalQuestions) * 100);
-  const passed = percentage >= (quiz.passingScore || 70);
+  const score = resultData?.score || 0;
+  const percentage = resultData?.percentage || 0;
+  const passed = resultData?.passed || false;
+  const xpEarned = resultData?.xpEarned || 0;
+  const reviewList = resultData?.review || [];
 
   return (
     <div className="max-w-3xl mx-auto space-y-6">
@@ -103,6 +119,12 @@ export default function QuizPlayer({ quiz, onComplete, onClose }) {
           </Badge>
         </div>
       </div>
+
+      {submitError && (
+        <div className="p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-xs font-semibold text-rose-700">
+          {submitError}
+        </div>
+      )}
 
       {!isSubmitted ? (
         <>
@@ -167,7 +189,7 @@ export default function QuizPlayer({ quiz, onComplete, onClose }) {
               variant="outline"
               size="md"
               icon={ArrowLeft}
-              disabled={currentQuestionIndex === 0}
+              disabled={currentQuestionIndex === 0 || isSubmitting}
               onClick={() => setCurrentQuestionIndex((prev) => Math.max(0, prev - 1))}
             >
               Previous
@@ -179,7 +201,7 @@ export default function QuizPlayer({ quiz, onComplete, onClose }) {
                 size="md"
                 icon={ArrowRight}
                 iconPosition="right"
-                disabled={selectedAnswers[currentQuestionIndex] === undefined}
+                disabled={selectedAnswers[currentQuestionIndex] === undefined || isSubmitting}
                 onClick={() => setCurrentQuestionIndex((prev) => prev + 1)}
               >
                 Next Question
@@ -189,7 +211,8 @@ export default function QuizPlayer({ quiz, onComplete, onClose }) {
                 variant="success"
                 size="md"
                 icon={CheckCircle2}
-                disabled={selectedAnswers[currentQuestionIndex] === undefined}
+                disabled={selectedAnswers[currentQuestionIndex] === undefined || isSubmitting}
+                loading={isSubmitting}
                 onClick={handleSubmitQuiz}
               >
                 Submit Quiz
@@ -210,7 +233,7 @@ export default function QuizPlayer({ quiz, onComplete, onClose }) {
             </div>
 
             <h3 className="text-2xl font-black text-slate-900">
-              {passed ? 'Quiz Completed 🎉' : 'Needs Review'}
+              {passed ? 'Quiz Passed! 🎉' : 'Needs Review'}
             </h3>
 
             <div className="flex items-center justify-center gap-6 py-2">
@@ -241,7 +264,7 @@ export default function QuizPlayer({ quiz, onComplete, onClose }) {
                   Reward
                 </span>
                 <span className="text-2xl font-extrabold text-purple-600">
-                  {passed ? `+${quiz.xp || 100} XP` : '0 XP'}
+                  {xpEarned > 0 ? `+${xpEarned} XP` : '0 XP'}
                 </span>
               </div>
             </div>
@@ -271,57 +294,58 @@ export default function QuizPlayer({ quiz, onComplete, onClose }) {
             </div>
           </Card>
 
-          {/* Question by question answer review with explanations */}
-          <div className="space-y-4">
-            <h4 className="text-sm font-bold text-slate-900">Detailed Answer Review</h4>
-            {quiz.questions.map((q, idx) => {
-              const userAnswer = selectedAnswers[idx];
-              const isCorrect = userAnswer === q.correctAnswer;
+          {/* Question by question answer review with verified backend explanations */}
+          {reviewList.length > 0 && (
+            <div className="space-y-4">
+              <h4 className="text-sm font-bold text-slate-900">Detailed Answer Review</h4>
+              {reviewList.map((review, idx) => {
+                const isCorrect = review.isCorrect;
 
-              return (
-                <Card key={idx} className="p-5 space-y-3">
-                  <div className="flex items-start justify-between gap-3">
-                    <span className="text-xs font-bold text-slate-500">
-                      Question {idx + 1}
-                    </span>
-                    {isCorrect ? (
-                      <Badge variant="success" icon={CheckCircle2}>
-                        Correct
-                      </Badge>
-                    ) : (
-                      <Badge variant="danger" icon={AlertCircle}>
-                        Incorrect
-                      </Badge>
-                    )}
-                  </div>
-
-                  <p className="text-sm font-semibold text-slate-800">{q.question}</p>
-
-                  <div className="text-xs space-y-1.5 pt-1">
-                    <div className="text-slate-600">
-                      Your answer:{' '}
-                      <span className={isCorrect ? 'font-bold text-emerald-700' : 'font-bold text-rose-700'}>
-                        {q.options[userAnswer] || 'None'}
+                return (
+                  <Card key={idx} className="p-5 space-y-3">
+                    <div className="flex items-start justify-between gap-3">
+                      <span className="text-xs font-bold text-slate-500">
+                        Question {idx + 1}
                       </span>
+                      {isCorrect ? (
+                        <Badge variant="success" icon={CheckCircle2}>
+                          Correct
+                        </Badge>
+                      ) : (
+                        <Badge variant="danger" icon={AlertCircle}>
+                          Incorrect
+                        </Badge>
+                      )}
                     </div>
-                    {!isCorrect && (
-                      <div className="text-emerald-700">
-                        Correct answer:{' '}
-                        <span className="font-bold">{q.options[q.correctAnswer]}</span>
+
+                    <p className="text-sm font-semibold text-slate-800">{review.question}</p>
+
+                    <div className="text-xs space-y-1.5 pt-1">
+                      <div className="text-slate-600">
+                        Your answer:{' '}
+                        <span className={isCorrect ? 'font-bold text-emerald-700' : 'font-bold text-rose-700'}>
+                          {review.options[review.userAnswer] || 'None'}
+                        </span>
+                      </div>
+                      {!isCorrect && (
+                        <div className="text-emerald-700">
+                          Correct answer:{' '}
+                          <span className="font-bold">{review.options[review.correctAnswer]}</span>
+                        </div>
+                      )}
+                    </div>
+
+                    {review.explanation && (
+                      <div className="p-3 bg-slate-50 rounded-xl text-xs text-slate-600 border border-slate-100 leading-relaxed">
+                        <span className="font-bold text-slate-700 block mb-0.5">Explanation:</span>
+                        {review.explanation}
                       </div>
                     )}
-                  </div>
-
-                  {q.explanation && (
-                    <div className="p-3 bg-slate-50 rounded-xl text-xs text-slate-600 border border-slate-100 leading-relaxed">
-                      <span className="font-bold text-slate-700 block mb-0.5">Explanation:</span>
-                      {q.explanation}
-                    </div>
-                  )}
-                </Card>
-              );
-            })}
-          </div>
+                  </Card>
+                );
+              })}
+            </div>
+          )}
         </div>
       )}
     </div>

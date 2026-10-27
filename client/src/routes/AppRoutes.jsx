@@ -12,7 +12,6 @@ import ForgotPassword from '../pages/auth/ForgotPassword';
 import Dashboard from '../pages/user/Dashboard';
 import Journey from '../pages/user/Journey';
 import DayDetails from '../pages/user/DayDetails';
-import Challenges from '../pages/user/Challenges';
 import Achievements from '../pages/user/Achievements';
 import Progress from '../pages/user/Progress';
 import Profile from '../pages/user/Profile';
@@ -42,7 +41,6 @@ export default function AppRoutes() {
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/journey" element={<Journey />} />
           <Route path="/journey/:dayId" element={<DayDetails />} />
-          <Route path="/challenges" element={<Challenges />} />
           <Route path="/achievements" element={<Achievements />} />
           <Route path="/progress" element={<Progress />} />
           <Route path="/profile" element={<Profile />} />

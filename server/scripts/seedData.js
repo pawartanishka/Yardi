@@ -1,8 +1,15 @@
 const mongoose = require('mongoose');
+const path = require('path');
 const dotenv = require('dotenv');
 const bcrypt = require('bcryptjs');
 
-dotenv.config();
+dotenv.config({ path: path.join(__dirname, '..', '.env') });
+
+// Safety Guard: Prevent accidental execution in production
+if (process.env.NODE_ENV === 'production') {
+  console.error('[CRITICAL] Development seed script cannot run in production environments.');
+  process.exit(1);
+}
 
 const User = require('../models/User');
 const JourneyDay = require('../models/JourneyDay');
@@ -17,7 +24,7 @@ const connectDB = async () => {
   try {
     const uri = process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/yardi_launchpad';
     await mongoose.connect(uri);
-    console.log('[Seed] Connected to MongoDB for seeding');
+    console.log('[Dev Seed] Connected to MongoDB for isolated testing seed');
   } catch (error) {
     console.error('[Seed Error]:', error.message);
     process.exit(1);

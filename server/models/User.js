@@ -45,11 +45,11 @@ const userSchema = new mongoose.Schema(
     },
     bio: {
       type: String,
-      default: 'Incoming Software Engineer passionate about enterprise cloud applications and scalable distributed systems.',
+      default: '',
     },
     phone: {
       type: String,
-      default: '+1 (555) 234-8921',
+      default: '',
     },
     xp: {
       type: Number,
@@ -61,15 +61,15 @@ const userSchema = new mongoose.Schema(
     },
     currentStreak: {
       type: Number,
-      default: 1,
+      default: 0,
     },
     longestStreak: {
       type: Number,
-      default: 1,
+      default: 0,
     },
     lastActiveDate: {
       type: Date,
-      default: Date.now,
+      default: null,
     },
     currentDay: {
       type: Number,

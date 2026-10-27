@@ -4,7 +4,7 @@ export const mockBadges = [
   {
     id: "badge-1",
     name: "First Step",
-    description: "Completed Day 1 of the LaunchPad Journey",
+    description: "Completed Day 1 of the Pre-Joining Journey",
     icon: "Rocket",
     requirement: "Complete Day 1",
     xp: 100,
@@ -71,7 +71,7 @@ export const mockBadges = [
   },
   {
     id: "badge-8",
-    name: "LaunchPad Champion",
+    name: "Yardi Onboarding Champion",
     description: "Successfully graduated from the complete 15-Day Journey",
     icon: "Trophy",
     requirement: "Complete all 15 days",

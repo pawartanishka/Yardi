@@ -9,12 +9,9 @@ import {
   Lightbulb,
   PieChart,
   ArrowRight,
-  ChevronRight,
   ShieldCheck,
   Building2,
   Calendar,
-  Sparkles,
-  Flame,
   CheckCircle2,
   Users,
   Award,
@@ -24,7 +21,6 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useJourney } from '../../context/JourneyContext';
-import YardiLogo from '../../components/common/YardiLogo';
 import VideoPlayerModal from '../../components/activities/VideoPlayerModal';
 import ReadingViewerModal from '../../components/activities/ReadingViewerModal';
 import ChallengeModal from '../../components/activities/ChallengeModal';
@@ -32,61 +28,81 @@ import ReflectionModal from '../../components/activities/ReflectionModal';
 import QuizPlayer from '../../components/quiz/QuizPlayer';
 import Modal from '../../components/common/Modal';
 import CompletionCelebrationModal from '../../components/journey/CompletionCelebrationModal';
-import { mockQuizDay5 } from '../../data/mockData';
+import api from '../../services/api';
 
 export default function Dashboard() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const {
     days,
-    badges,
     showCelebration,
     closeCelebration,
+    loadDayActivities,
     getDayActivities,
     completeActivity,
   } = useJourney();
 
-  const currentDayNum = user?.currentDay || 5;
+  const currentDayNum = user?.currentDay || 1;
   const currentDayId = `day-${currentDayNum}`;
-  const currentDay = days.find((d) => d.dayNumber === currentDayNum) || days[4];
+  const currentDay = days.find((d) => d.dayNumber === currentDayNum) || days[0];
   const activities = getDayActivities(currentDayId);
 
   // Active modal state
   const [activeActivity, setActiveActivity] = useState(null);
   const [modalType, setModalType] = useState(null);
+  const [activeQuiz, setActiveQuiz] = useState(null);
+  const [quizLoading, setQuizLoading] = useState(false);
 
-  const handleOpenActivity = (activity) => {
+  React.useEffect(() => {
+    loadDayActivities(currentDayId);
+  }, [currentDayId, loadDayActivities]);
+
+  const handleOpenActivity = async (activity) => {
     setActiveActivity(activity);
     setModalType(activity.type);
+
+    if (activity.type === 'quiz') {
+      setQuizLoading(true);
+      try {
+        const quizId = activity.quizId || `quiz-day-${currentDayNum}`;
+        const res = await api.get(`/quizzes/${quizId}`);
+        if (res.data && res.data.quiz) {
+          setActiveQuiz(res.data.quiz);
+        }
+      } catch (err) {
+        console.error('Failed to load quiz content:', err.message);
+      } finally {
+        setQuizLoading(false);
+      }
+    }
   };
 
   const handleCloseModal = () => {
     setActiveActivity(null);
     setModalType(null);
+    setActiveQuiz(null);
   };
 
-  const handleActivityComplete = (activityId) => {
-    completeActivity(currentDayId, activityId);
+  const handleActivityComplete = (activityId, reflectionAnswer) => {
+    completeActivity(currentDayId, activityId, reflectionAnswer);
   };
 
-  // Section 1: Top 3 Hero Cards (Aligned with image: Business Strategy, Market Research, Resource Optimization)
+  // Section 1: Top 3 Hero Cards (Matches reference consulting layout: Business Strategy, Market Research, Resource Optimization)
   const coreStrategyCards = [
     {
-      title: "Business Strategy & Journey",
+      title: "Business Strategy",
       subtitle: `Day ${currentDayNum}: ${currentDay?.title || 'Communication & Collaboration'}`,
-      description: "Structured corporate progression roadmap aligning your technical capabilities with Yardi client property solutions.",
+      description: "Explore Yardi corporate history, cross-functional squads, and core real estate client service standards.",
       icon: Compass,
-      actionText: "Resume Roadmap",
-      actionPath: `/journey/${currentDayId}`,
-      badge: "Current Milestone",
-      badgeColor: "bg-blue-50 text-blue-700 border-blue-200"
+      actionText: "Learn More",
+      actionPath: `/journey/${currentDayId}`
     },
     {
-      title: "Market Research & Knowledge",
-      subtitle: "Verified Pre-Joining Assessments",
-      description: "Validate compliance, cybersecurity protocols, and cloud architecture standards before Day 1 reporting.",
+      title: "Market Research",
+      subtitle: "Enterprise Standards & Compliance",
+      description: "Review security protocols, SOC-2 data governance, and cloud platform best practices before Day 1.",
       icon: Search,
-      actionText: "Start Knowledge Check",
+      actionText: "Learn More",
       actionClick: () => {
         const quizAct = activities.find(a => a.type === 'quiz') || {
           id: 'act-quiz-default',
@@ -94,19 +110,15 @@ export default function Dashboard() {
           type: 'quiz'
         };
         handleOpenActivity(quizAct);
-      },
-      badge: "Quiz Ready",
-      badgeColor: "bg-purple-50 text-purple-700 border-purple-200"
+      }
     },
     {
       title: "Resource Optimization",
-      subtitle: `${user?.xp || 1450} XP • ${user?.currentStreak || 5}-Day Streak`,
-      description: "Track your onboarding velocity, earned milestone badges, and squad integration readiness indices.",
+      subtitle: "Operational Readiness & Tools",
+      description: "Verify development toolchains, communication channels, and squad collaboration frameworks.",
       icon: Settings,
-      actionText: "View Achievements",
-      actionPath: "/achievements",
-      badge: "Top 5% Cohort",
-      badgeColor: "bg-amber-50 text-amber-700 border-amber-200"
+      actionText: "Learn More",
+      actionPath: "/journey"
     }
   ];
 
@@ -115,19 +127,19 @@ export default function Dashboard() {
     {
       id: "growth",
       name: "Growth",
-      tagline: "Career Velocity & Mentorship",
-      description: "Fast-track technical mastery through Yardi University pathways, leadership shadowing, and assigned squad buddies.",
+      tagline: "Career Pathways & Mentorship",
+      description: "Structured technical learning pathways, leadership shadowing, and designated onboarding buddy pairings.",
       icon: TrendingUp,
-      actionText: "Explore Growth",
+      actionText: "Learn More",
       link: "/progress"
     },
     {
       id: "efficiency",
       name: "Efficiency",
       tagline: "Asynchronous Workflows",
-      description: "Streamline communication across global regions (PST, EST, IST, CET) with documentation-first hygiene.",
+      description: "Streamline cross-regional team collaboration with documentation-first communication norms.",
       icon: Zap,
-      actionText: "Read Playbook",
+      actionText: "Learn More",
       actionClick: () => {
         const readAct = activities.find(a => a.type === 'reading') || activities[0];
         if (readAct) handleOpenActivity(readAct);
@@ -136,19 +148,19 @@ export default function Dashboard() {
     {
       id: "innovation",
       name: "Innovation",
-      tagline: "Enterprise Cloud Solutions",
-      description: "Architect scalable multi-tenant solutions across commercial, residential, and investment asset management.",
+      tagline: "Enterprise Cloud Platforms",
+      description: "Scalable multi-tenant cloud architectures powering commercial, residential, and investment asset management.",
       icon: Lightbulb,
-      actionText: "View Challenges",
-      link: "/challenges"
+      actionText: "Learn More",
+      link: "/journey"
     },
     {
       id: "analysis",
       name: "Analysis",
-      tagline: "Real-World Dilemma Solving",
-      description: "Exercise critical situational judgment through simulated engineering rollbacks and client escalation scenarios.",
+      tagline: "Operational Problem Solving",
+      description: "Real-world incident response protocols, code review standards, and client-centric decision making.",
       icon: PieChart,
-      actionText: "Solve Dilemma",
+      actionText: "Learn More",
       actionClick: () => {
         const challAct = activities.find(a => a.type === 'challenge') || activities[2];
         if (challAct) handleOpenActivity(challAct);
@@ -156,133 +168,105 @@ export default function Dashboard() {
     }
   ];
 
-  // Section 3: Recent Projects / Day Modules (Matching bottom 3 cards of attached design)
+  // Section 3: Recent Projects / Day Modules
   const recentProjects = [
     {
       id: "proj-1",
       title: "Strategic Growth Planning",
       category: "Culture & Values Ethos",
-      summary: "Understand Yardi 40+ year legacy: taking care of clients, employees, and community philanthropy.",
+      summary: "Explore Yardi 40-year heritage: taking care of clients, employees, and community philanthropy.",
       image: "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&q=80&w=600",
-      dayRef: "Day 3 Completed",
-      status: "Completed",
+      status: "Milestone",
       link: "/journey/day-3"
     },
     {
       id: "proj-2",
       title: "Market Insights & Analysis",
-      category: "Asynchronous Squad Collaboration",
-      summary: "Mastering Jira ticket workflows, Teams channel etiquettes, and transparent pull request reviews.",
+      category: "Squad Collaboration & Delivery",
+      summary: "Mastering Jira ticket workflows, Microsoft Teams hygiene, and constructive pull request reviews.",
       image: "https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&q=80&w=600",
-      dayRef: "Day 5 In Progress",
-      status: "Active Today",
+      status: "In Progress",
       link: `/journey/${currentDayId}`
     },
     {
       id: "proj-3",
       title: "Operational Efficiency",
       category: "Workplace Tools & Security SOP",
-      summary: "Cloud toolchains, SOC2 data privacy guidelines, zero-trust infrastructure, and Day 1 checklist.",
+      summary: "Enterprise cloud environments, data privacy protocols, zero-trust infrastructure, and Day 1 checklist.",
       image: "https://images.unsplash.com/photo-1507679799987-c73779587ccf?auto=format&fit=crop&q=80&w=600",
-      dayRef: "Day 6 Unlocking Soon",
       status: "Upcoming",
       link: "/journey/day-6"
     }
   ];
 
   return (
-    <div className="-m-4 sm:-m-6 lg:-m-8 bg-[#F4F6F9] min-h-screen text-slate-800 font-sans">
+    <div className="w-full bg-[#F4F6F9] min-h-full text-slate-800 font-sans pb-16">
       
       {/* =========================================================================
-          HERO BANNER: Full-width modern architectural background
-          Matches the attached image with modern corporate city towers & bold typography
+          HERO BANNER: Full-width corporate architectural skyline
           ========================================================================= */}
-      <section className="relative w-full bg-slate-950 text-white overflow-hidden pb-32 sm:pb-36 pt-10 sm:pt-16 px-6 sm:px-12 lg:px-20">
-        {/* Background Skyline Image with Corporate Blue Overlay */}
+      <section className="relative w-full bg-slate-950 text-white overflow-hidden pb-32 sm:pb-36 pt-14 sm:pt-18 px-6 sm:px-12 lg:px-16">
+        {/* Background Architectural Skyline */}
         <div className="absolute inset-0 z-0">
           <img
             src="https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&q=80&w=2000"
             alt="Corporate Architecture"
-            className="w-full h-full object-cover object-center opacity-35 filter brightness-75 contrast-125"
+            className="w-full h-full object-cover object-center opacity-40 filter brightness-75 contrast-125"
           />
-          <div className="absolute inset-0 bg-gradient-to-r from-slate-950 via-slate-950/80 to-blue-950/70" />
-          <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-transparent" />
-        </div>
-
-        {/* Hero Top Sub-Nav in Corporate Style */}
-        <div className="relative z-10 flex flex-wrap items-center justify-between gap-4 pb-12 border-b border-white/10">
-          <div className="flex items-center gap-3">
-            <YardiLogo className="h-8" variant="white" />
-            <span className="hidden sm:inline-block h-5 w-px bg-white/20" />
-            <span className="text-xs uppercase tracking-widest text-blue-300 font-semibold">
-              LaunchPad Consulting Platform
-            </span>
-          </div>
-
-          <div className="flex items-center gap-6 text-xs font-semibold tracking-wide text-slate-300">
-            <Link to="/journey" className="hover:text-white transition-colors">Journey</Link>
-            <Link to="/challenges" className="hover:text-white transition-colors">Challenges</Link>
-            <Link to="/achievements" className="hover:text-white transition-colors">Achievements</Link>
-            <Link to="/progress" className="hover:text-white transition-colors">Analytics</Link>
-            <Link
-              to="/profile"
-              className="px-4 py-1.5 rounded-md bg-blue-600/80 hover:bg-blue-600 text-white font-bold transition-all border border-blue-400/30 shadow-sm"
-            >
-              Candidate Portal
-            </Link>
-          </div>
+          <div className="absolute inset-0 bg-gradient-to-r from-slate-950 via-slate-950/85 to-blue-950/70" />
+          <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-transparent to-transparent" />
         </div>
 
         {/* Hero Headline & Subtext */}
-        <div className="relative z-10 max-w-3xl pt-12 sm:pt-16 space-y-5">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/20 text-blue-300 text-xs font-bold border border-blue-400/30 backdrop-blur-md">
+        <div className="relative z-10 max-w-3xl space-y-4">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-400/20 text-blue-300 text-xs font-semibold backdrop-blur-sm">
             <Building2 className="w-3.5 h-3.5 text-blue-400" />
-            <span>Yardi Enterprise Onboarding Ecosystem</span>
+            <span>Yardi Systems • Enterprise Onboarding</span>
           </div>
 
           <h1 className="text-4xl sm:text-5xl lg:text-6xl font-normal tracking-tight text-white leading-tight">
             Empowering Business <br />
-            <span className="font-extrabold text-white">Success.</span>
+            <span className="font-extrabold text-white">Success</span>
           </h1>
 
-          <p className="text-base sm:text-lg text-slate-200/90 font-light max-w-xl leading-relaxed">
-            Elevate your pre-joining journey with structured engineering modules, interactive culture playbooks, and Day 1 readiness.
+          <p className="text-sm sm:text-base text-slate-200/90 font-light max-w-xl leading-relaxed">
+            Elevate your pre-joining journey with structured enterprise systems orientation, squad collaboration standards, and Day-1 readiness.
           </p>
 
-          <div className="flex flex-wrap items-center gap-4 pt-4">
+          <div className="flex flex-wrap items-center gap-3 pt-3">
             <Link
               to={`/journey/${currentDayId}`}
-              className="px-6 py-3 rounded-md bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-500 hover:to-blue-600 text-white font-bold text-sm shadow-lg transition-all"
+              className="px-6 py-2.5 rounded bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs sm:text-sm shadow-md transition-all"
             >
               Resume Day {currentDayNum}
             </Link>
 
             <Link
               to="/journey"
-              className="px-6 py-3 rounded-md bg-white/10 hover:bg-white/20 text-white font-semibold text-sm border border-white/20 backdrop-blur-md transition-all"
+              className="px-6 py-2.5 rounded bg-slate-900/80 hover:bg-slate-800 text-white font-medium text-xs sm:text-sm border border-slate-700 transition-all"
             >
-              Explore 15-Day Roadmap
+              View 15-Day Curriculum
             </Link>
           </div>
         </div>
       </section>
 
       {/* =========================================================================
-          FLOATING SECTION: 3 Prominent White Feature Cards
-          Directly matches the 3 elevated cards overlapping the hero in the reference image
+          FLOATING SECTION: 3 White Feature Cards
+          Directly matches reference consulting design: Business Strategy, Market Research, Resource Optimization
           ========================================================================= */}
-      <section className="relative z-20 max-w-7xl mx-auto px-6 sm:px-12 -mt-20 sm:-mt-24">
+      <section className="relative z-20 max-w-6xl mx-auto px-4 sm:px-8 -mt-16 sm:-mt-24">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {coreStrategyCards.map((card, idx) => {
             const IconComponent = card.icon;
             return (
               <div
                 key={idx}
-                className="bg-white rounded-xl p-8 sm:p-10 shadow-xl border border-slate-200/90 flex flex-col justify-between hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 text-center group"
+                className="bg-white rounded-xl p-8 shadow-xl border border-slate-100 flex flex-col justify-between hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 text-center group"
               >
                 <div>
-                  {/* Circular Icon with Outline */}
-                  <div className="w-16 h-16 rounded-full border-2 border-slate-800 text-slate-800 flex items-center justify-center mx-auto mb-6 group-hover:bg-blue-600 group-hover:border-blue-600 group-hover:text-white transition-all duration-300">
+                  {/* Clean Circular Outline Icon */}
+                  <div className="w-16 h-16 rounded-full border-2 border-slate-700 text-slate-700 flex items-center justify-center mx-auto mb-5 group-hover:bg-[#4A7298] group-hover:border-[#4A7298] group-hover:text-white transition-all duration-300">
                     <IconComponent className="w-7 h-7" />
                   </div>
 
@@ -290,11 +274,7 @@ export default function Dashboard() {
                     {card.title}
                   </h3>
 
-                  <p className="text-xs font-semibold text-blue-700 mb-3 uppercase tracking-wider">
-                    {card.subtitle}
-                  </p>
-
-                  <p className="text-xs text-slate-600 leading-relaxed font-normal mb-8">
+                  <p className="text-xs text-slate-500 leading-relaxed font-normal mb-8 px-2">
                     {card.description}
                   </p>
                 </div>
@@ -303,7 +283,7 @@ export default function Dashboard() {
                   {card.actionPath ? (
                     <Link
                       to={card.actionPath}
-                      className="inline-block w-full py-2.5 px-4 rounded-md bg-[#4A7298] hover:bg-[#3B5E80] text-white text-xs font-bold tracking-wide transition-all shadow-sm"
+                      className="inline-block w-full py-2.5 px-4 rounded bg-[#4A7298] hover:bg-[#3B5E80] text-white text-xs font-semibold tracking-wide transition-all shadow-sm"
                     >
                       {card.actionText}
                     </Link>
@@ -311,7 +291,7 @@ export default function Dashboard() {
                     <button
                       type="button"
                       onClick={card.actionClick}
-                      className="w-full py-2.5 px-4 rounded-md bg-[#4A7298] hover:bg-[#3B5E80] text-white text-xs font-bold tracking-wide transition-all shadow-sm cursor-pointer"
+                      className="w-full py-2.5 px-4 rounded bg-[#4A7298] hover:bg-[#3B5E80] text-white text-xs font-semibold tracking-wide transition-all shadow-sm cursor-pointer"
                     >
                       {card.actionText}
                     </button>
@@ -325,18 +305,14 @@ export default function Dashboard() {
 
       {/* =========================================================================
           SECTION 2: "OUR CONSULTING FOCUS" (4 Pillars)
-          Directly matches the middle 4-column section of the attached design:
           Growth, Efficiency, Innovation, Analysis
           ========================================================================= */}
-      <section className="max-w-7xl mx-auto px-6 sm:px-12 py-20 sm:py-24 text-center">
-        <div className="mb-14 space-y-2">
-          <p className="text-xs font-extrabold uppercase tracking-widest text-[#4A7298]">
-            Pre-Joining Competency Roadmap
-          </p>
-          <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
+      <section className="max-w-6xl mx-auto px-4 sm:px-8 py-20 text-center">
+        <div className="mb-14 space-y-1">
+          <h2 className="text-lg sm:text-xl font-extrabold uppercase tracking-widest text-[#4A7298]">
             OUR CONSULTING FOCUS
           </h2>
-          <div className="w-16 h-1 bg-blue-600 mx-auto rounded-full mt-3" />
+          <div className="w-12 h-0.5 bg-[#4A7298] mx-auto rounded-full mt-2" />
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -345,22 +321,18 @@ export default function Dashboard() {
             return (
               <div
                 key={pillar.id}
-                className="bg-white rounded-xl p-8 border border-slate-200/80 shadow-sm hover:shadow-md transition-all flex flex-col justify-between text-center group"
+                className="bg-white rounded-xl p-6 border border-slate-200/70 shadow-sm hover:shadow-md transition-all flex flex-col justify-between text-center group"
               >
                 <div>
-                  <div className="w-14 h-14 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center mx-auto mb-5 group-hover:scale-110 transition-transform">
+                  <div className="w-12 h-12 rounded-full bg-blue-50 text-[#4A7298] flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
                     <PillarIcon className="w-6 h-6" />
                   </div>
 
-                  <h3 className="text-lg font-bold text-slate-900 mb-1">
+                  <h3 className="text-base font-bold text-slate-900 mb-2">
                     {pillar.name}
                   </h3>
 
-                  <p className="text-[11px] font-semibold text-slate-500 mb-3 uppercase tracking-wider">
-                    {pillar.tagline}
-                  </p>
-
-                  <p className="text-xs text-slate-600 leading-relaxed font-normal mb-6">
+                  <p className="text-xs text-slate-500 leading-relaxed font-normal mb-6">
                     {pillar.description}
                   </p>
                 </div>
@@ -369,7 +341,7 @@ export default function Dashboard() {
                   {pillar.link ? (
                     <Link
                       to={pillar.link}
-                      className="inline-block w-full py-2 px-3 rounded border border-slate-300 hover:border-blue-600 text-slate-700 hover:text-blue-700 text-xs font-bold transition-all"
+                      className="inline-block w-full py-2 px-3 rounded border border-slate-300 hover:border-[#4A7298] text-slate-700 hover:text-[#4A7298] text-xs font-medium transition-all"
                     >
                       {pillar.actionText}
                     </Link>
@@ -377,7 +349,7 @@ export default function Dashboard() {
                     <button
                       type="button"
                       onClick={pillar.actionClick}
-                      className="w-full py-2 px-3 rounded border border-slate-300 hover:border-blue-600 text-slate-700 hover:text-blue-700 text-xs font-bold transition-all cursor-pointer"
+                      className="w-full py-2 px-3 rounded border border-slate-300 hover:border-[#4A7298] text-slate-700 hover:text-[#4A7298] text-xs font-medium transition-all cursor-pointer"
                     >
                       {pillar.actionText}
                     </button>
@@ -390,83 +362,55 @@ export default function Dashboard() {
       </section>
 
       {/* =========================================================================
-          SECTION 3: "RECENT PROJECTS" (Milestone Showcase)
-          Matches the bottom dark cards with photographic headers in the attached image
+          SECTION 3: "RECENT PROJECTS" (3 Photo-Card Showcase)
           ========================================================================= */}
-      <section className="relative bg-slate-950 text-white py-20 px-6 sm:px-12 lg:px-20 overflow-hidden">
-        {/* Subtle background glow */}
-        <div className="absolute top-0 right-1/4 w-96 h-96 bg-blue-600/10 rounded-full blur-3xl pointer-events-none" />
-
-        <div className="max-w-7xl mx-auto relative z-10">
-          <div className="text-center mb-14 space-y-2">
-            <p className="text-xs font-extrabold uppercase tracking-widest text-blue-400">
-              Interactive Case Studies & Milestones
-            </p>
-            <h2 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight uppercase">
-              Recent Projects & Scenarios
+      <section className="relative bg-slate-950 text-white py-16 px-4 sm:px-8 lg:px-12 overflow-hidden">
+        <div className="max-w-6xl mx-auto relative z-10">
+          <div className="text-center mb-12 space-y-1">
+            <h2 className="text-lg sm:text-xl font-extrabold uppercase tracking-widest text-slate-300">
+              RECENT PROJECTS
             </h2>
-            <div className="w-16 h-1 bg-blue-500 mx-auto rounded-full mt-3" />
+            <div className="w-12 h-0.5 bg-blue-500 mx-auto rounded-full mt-2" />
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {recentProjects.map((project) => (
               <div
                 key={project.id}
-                className="bg-white rounded-xl overflow-hidden shadow-2xl flex flex-col justify-between text-slate-900 group"
+                className="bg-white rounded-lg overflow-hidden shadow-xl flex flex-col justify-between text-slate-900 group"
               >
                 <div>
                   {/* Photo Header */}
-                  <div className="relative h-48 w-full overflow-hidden bg-slate-900">
+                  <div className="relative h-44 w-full overflow-hidden bg-slate-900">
                     <img
                       src={project.image}
                       alt={project.title}
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                     />
-                    <div className="absolute top-3 right-3 px-2.5 py-1 rounded bg-black/60 backdrop-blur-md text-white text-[10px] font-bold tracking-wider uppercase">
-                      {project.status}
-                    </div>
                   </div>
 
                   {/* Body Content */}
-                  <div className="p-6 space-y-2">
-                    <span className="text-[11px] font-extrabold uppercase tracking-wider text-blue-600">
-                      {project.category}
-                    </span>
-
-                    <h3 className="text-base font-bold text-slate-900">
+                  <div className="p-5 space-y-2">
+                    <h3 className="text-sm font-bold text-slate-900">
                       {project.title}
                     </h3>
 
-                    <p className="text-xs text-slate-600 leading-relaxed font-normal">
+                    <p className="text-xs text-slate-500 leading-relaxed font-normal">
                       {project.summary}
                     </p>
                   </div>
                 </div>
 
-                <div className="p-6 pt-0">
+                <div className="p-5 pt-0">
                   <Link
                     to={project.link}
-                    className="block w-full text-center py-2.5 rounded bg-[#4A7298] hover:bg-[#3B5E80] text-white text-xs font-bold transition-all shadow-sm"
+                    className="block w-full text-center py-2 rounded bg-[#4A7298] hover:bg-[#3B5E80] text-white text-xs font-semibold transition-all shadow-sm"
                   >
                     View Project
                   </Link>
                 </div>
               </div>
             ))}
-          </div>
-
-          {/* Quick stats footer inside the section */}
-          <div className="mt-16 pt-8 border-t border-white/10 flex flex-wrap items-center justify-between gap-4 text-xs text-slate-400">
-            <div className="flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-              <span>Current Candidate: <strong className="text-white">{user?.name || 'Alex Rivera'}</strong></span>
-            </div>
-
-            <div className="flex items-center gap-6">
-              <span>Overall Completion: <strong className="text-blue-400">{user?.overallProgress || 42}%</strong></span>
-              <span>Total Points: <strong className="text-purple-400">{user?.xp || 1450} XP</strong></span>
-              <span>Active Streak: <strong className="text-amber-400">{user?.currentStreak || 5} Days</strong></span>
-            </div>
           </div>
         </div>
       </section>
@@ -517,13 +461,24 @@ export default function Dashboard() {
           title=""
           maxWidth="max-w-3xl"
         >
-          <QuizPlayer
-            quiz={mockQuizDay5}
-            onComplete={({ score, total, percentage, xp }) => {
-              handleActivityComplete(activeActivity.id);
-            }}
-            onClose={handleCloseModal}
-          />
+          {quizLoading ? (
+            <div className="p-10 text-center space-y-3">
+              <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto"></div>
+              <p className="text-xs font-semibold text-slate-500">Loading assessment questions...</p>
+            </div>
+          ) : activeQuiz ? (
+            <QuizPlayer
+              quiz={activeQuiz}
+              onComplete={({ score, total, percentage, xp }) => {
+                handleActivityComplete(activeActivity.id || activeActivity._id);
+              }}
+              onClose={handleCloseModal}
+            />
+          ) : (
+            <div className="p-8 text-center text-slate-500">
+              <p>Quiz content is not currently available.</p>
+            </div>
+          )}
         </Modal>
       )}
 

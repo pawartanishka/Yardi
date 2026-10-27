@@ -83,6 +83,16 @@ const submitQuiz = async (req, res, next) => {
     const passed = percentage >= quiz.passingScore;
     const xpEarned = passed ? quiz.xp : 0;
 
+    // Check if user already previously passed this quiz to prevent duplicate XP
+    const previousPass = await QuizAttempt.findOne({
+      userId: req.user.id,
+      quizId: quiz.quizId,
+      passed: true,
+    });
+
+    const isFirstTimePass = passed && !previousPass;
+    const finalXpEarned = isFirstTimePass ? quiz.xp : 0;
+
     // Save attempt record
     const attempt = await QuizAttempt.create({
       userId: req.user.id,
@@ -92,16 +102,17 @@ const submitQuiz = async (req, res, next) => {
       total: totalQuestions,
       percentage,
       passed,
-      xpEarned,
+      xpEarned: finalXpEarned,
     });
 
     const user = await User.findById(req.user.id);
 
     if (passed) {
-      // Award XP
-      user.xp = (user.xp || 0) + xpEarned;
-      user.todayXp = (user.todayXp || 0) + xpEarned;
-      await user.save();
+      if (finalXpEarned > 0) {
+        user.xp = (user.xp || 0) + finalXpEarned;
+        user.todayXp = (user.todayXp || 0) + finalXpEarned;
+        await user.save();
+      }
 
       // If associated with an activity, mark activity complete
       if (quiz.activityId) {
@@ -131,7 +142,7 @@ const submitQuiz = async (req, res, next) => {
       await Notification.create({
         userId: user._id,
         title: `Quiz Passed! 🎉 (${percentage}%)`,
-        message: `Scored ${correctCount}/${totalQuestions} on "${quiz.title}". +${xpEarned} XP awarded.`,
+        message: `Scored ${correctCount}/${totalQuestions} on "${quiz.title}".` + (finalXpEarned > 0 ? ` +${finalXpEarned} XP awarded.` : ''),
         type: 'quiz',
       });
     }
@@ -142,7 +153,7 @@ const submitQuiz = async (req, res, next) => {
       total: totalQuestions,
       percentage,
       passed,
-      xpEarned,
+      xpEarned: finalXpEarned,
       passingScore: quiz.passingScore,
       review: answerReviews,
     });

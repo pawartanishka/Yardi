@@ -6,7 +6,11 @@
   "scripts": {
     "start": "node server.js",
     "dev": "nodemon server.js",
-    "seed": "node seed/seedData.js"
+    "seed": "node scripts/seedData.js",
+    "init:curriculum": "node scripts/initCurriculum.js",
+    "clean:demo": "node scripts/cleanDemoData.js",
+    "create:admin": "node scripts/createAdmin.js",
+    "test:e2e": "node tests/testE2E.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",

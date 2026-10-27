@@ -1,59 +1,89 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import axios from 'axios';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import confetti from 'canvas-confetti';
-import { mockJourneyDays, mockDayActivities, mockBadges } from '../data/mockData';
+import api from '../services/api';
 import { useAuth } from './AuthContext';
 import { useNotifications } from './NotificationContext';
 
 const JourneyContext = createContext();
 
 export function JourneyProvider({ children }) {
-  const { user, updateStats } = useAuth();
-  const { addNotification } = useNotifications();
+  const { user, isAuthenticated, updateStats } = useAuth();
+  const { fetchNotifications } = useNotifications();
 
-  const [days, setDays] = useState(() => {
-    const saved = localStorage.getItem('yardi_journey_days');
-    return saved ? JSON.parse(saved) : mockJourneyDays;
-  });
-
-  const [activitiesMap, setActivitiesMap] = useState(() => {
-    const saved = localStorage.getItem('yardi_activities_map');
-    return saved ? JSON.parse(saved) : mockDayActivities;
-  });
-
-  const [badges, setBadges] = useState(() => {
-    const saved = localStorage.getItem('yardi_badges');
-    return saved ? JSON.parse(saved) : mockBadges;
-  });
-
+  const [days, setDays] = useState([]);
+  const [activitiesMap, setActivitiesMap] = useState({});
+  const [badges, setBadges] = useState([]);
+  const [loadingDays, setLoadingDays] = useState(false);
   const [showCelebration, setShowCelebration] = useState(false);
 
-  useEffect(() => {
-    localStorage.setItem('yardi_journey_days', JSON.stringify(days));
-  }, [days]);
-
-  useEffect(() => {
-    localStorage.setItem('yardi_activities_map', JSON.stringify(activitiesMap));
-  }, [activitiesMap]);
-
-  useEffect(() => {
-    localStorage.setItem('yardi_badges', JSON.stringify(badges));
-  }, [badges]);
-
-  // Load from backend if available
-  useEffect(() => {
-    const fetchJourney = async () => {
-      try {
-        const res = await axios.get('/api/journey').catch(() => null);
-        if (res && res.data && res.data.days && res.data.days.length > 0) {
-          setDays(res.data.days);
-        }
-      } catch {
-        // fallback to existing state
+  // Fetch full 15-day journey overview from MongoDB
+  const fetchJourney = useCallback(async () => {
+    if (!isAuthenticated) {
+      setDays([]);
+      setActivitiesMap({});
+      return;
+    }
+    setLoadingDays(true);
+    try {
+      const res = await api.get('/journey');
+      if (res.data && res.data.days) {
+        setDays(res.data.days);
       }
-    };
-    fetchJourney();
+    } catch (err) {
+      console.error('Failed to load journey days:', err.message);
+    } finally {
+      setLoadingDays(false);
+    }
+  }, [isAuthenticated]);
+
+  // Fetch official badges from MongoDB
+  const fetchBadges = useCallback(async () => {
+    if (!isAuthenticated) {
+      setBadges([]);
+      return;
+    }
+    try {
+      const res = await api.get('/badges');
+      if (res.data && res.data.badges) {
+        setBadges(res.data.badges);
+      }
+    } catch (err) {
+      console.error('Failed to load badges:', err.message);
+    }
+  }, [isAuthenticated]);
+
+  // Load activities for a specific journey day
+  const loadDayActivities = useCallback(async (dayId) => {
+    if (!dayId) return [];
+    try {
+      const res = await api.get(`/journey/${dayId}`);
+      if (res.data && res.data.activities) {
+        setActivitiesMap((prev) => ({
+          ...prev,
+          [dayId]: res.data.activities,
+        }));
+        return res.data.activities;
+      }
+    } catch (err) {
+      console.error(`Failed to load activities for ${dayId}:`, err.message);
+    }
+    return [];
   }, []);
+
+  const getDayActivities = (dayId) => {
+    return activitiesMap[dayId] || [];
+  };
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      fetchJourney();
+      fetchBadges();
+    } else {
+      setDays([]);
+      setActivitiesMap({});
+      setBadges([]);
+    }
+  }, [isAuthenticated, fetchJourney, fetchBadges]);
 
   const triggerConfetti = () => {
     try {
@@ -61,115 +91,65 @@ export function JourneyProvider({ children }) {
         particleCount: 120,
         spread: 70,
         origin: { y: 0.6 },
-        colors: ['#2563EB', '#7C3AED', '#10B981', '#F59E0B'],
+        colors: ['#0f172a', '#2563EB', '#10B981', '#F59E0B'],
       });
     } catch {
       // ignore
     }
   };
 
-  const getDayActivities = (dayId) => {
-    return activitiesMap[dayId] || activitiesMap['day-5'] || [];
-  };
+  // Complete an activity via backend verification
+  const completeActivity = async (dayId, activityId, reflectionAnswer) => {
+    try {
+      const payload = reflectionAnswer ? { reflectionAnswer } : {};
+      const res = await api.post(`/activities/${activityId}/complete`, payload);
 
-  const completeActivity = async (dayId, activityId) => {
-    const currentList = activitiesMap[dayId] || [];
-    const targetActivity = currentList.find((a) => a.id === activityId);
-    if (!targetActivity || targetActivity.status === 'completed') {
-      return { success: true, alreadyCompleted: true };
-    }
+      if (res.data && res.data.success) {
+        // Update activity status in local cache
+        setActivitiesMap((prev) => {
+          const currentList = prev[dayId] || [];
+          return {
+            ...prev,
+            [dayId]: currentList.map((a) =>
+              a.id === activityId ? { ...a, status: 'completed' } : a
+            ),
+          };
+        });
 
-    const xpEarned = targetActivity.xp || 50;
+        // Update authenticated user stats in AuthContext
+        if (res.data.userStats) {
+          updateStats(res.data.userStats);
+        }
 
-    // Update activity state
-    const updatedActivities = currentList.map((a) =>
-      a.id === activityId ? { ...a, status: 'completed' } : a
-    );
+        // Refresh days from server to recalculate completion and milestone unlocks
+        await fetchJourney();
+        await fetchBadges();
+        if (fetchNotifications) {
+          await fetchNotifications();
+        }
 
-    const newMap = { ...activitiesMap, [dayId]: updatedActivities };
-    setActivitiesMap(newMap);
+        if (res.data.isDayCompleted) {
+          triggerConfetti();
+          const dayNum = parseInt((dayId || '').replace('day-', ''), 10);
+          if (dayNum === 15) {
+            setShowCelebration(true);
+          }
+        }
 
-    // Calculate completed count for this day
-    const completedCount = updatedActivities.filter((a) => a.status === 'completed').length;
-    const isDayCompleted = completedCount === updatedActivities.length;
-
-    // Update days state
-    let nextDayNumber = user?.currentDay || 5;
-    const updatedDays = days.map((d) => {
-      if (d.id === dayId) {
         return {
-          ...d,
-          completedCount,
-          status: isDayCompleted ? 'completed' : 'current',
+          success: true,
+          xpEarned: res.data.xpEarned,
+          isDayCompleted: res.data.isDayCompleted,
+          nextDayUnlocked: res.data.nextDayUnlocked,
         };
       }
-      return d;
-    });
 
-    if (isDayCompleted) {
-      // Find current day number
-      const thisDay = days.find((d) => d.id === dayId);
-      const currentDayNum = thisDay ? thisDay.dayNumber : 5;
-      nextDayNumber = Math.min(15, currentDayNum + 1);
-
-      // Unlock next day
-      for (let i = 0; i < updatedDays.length; i++) {
-        if (updatedDays[i].dayNumber === nextDayNumber && updatedDays[i].status === 'locked') {
-          updatedDays[i].status = 'current';
-        }
-      }
-
-      addNotification({
-        title: `Day ${currentDayNum} Completed! 🎉`,
-        message: `Outstanding job completing all activities for Day ${currentDayNum}. Day ${nextDayNumber} is now unlocked!`,
-        type: 'completion',
-      });
-
-      triggerConfetti();
-
-      // Check if Day 15 finished!
-      if (currentDayNum === 15) {
-        setShowCelebration(true);
-        triggerConfetti();
-      }
-    } else {
-      addNotification({
-        title: `Activity Completed! +${xpEarned} XP`,
-        message: `You completed "${targetActivity.title}".`,
-        type: 'activity',
-      });
-    }
-
-    setDays(updatedDays);
-    updateStats({
-      xpGained: xpEarned,
-      currentDay: nextDayNumber,
-    });
-
-    // Award badges check
-    if (completedCount >= 1 && !badges.find((b) => b.id === 'badge-1')?.earned) {
-      unlockBadge('badge-1');
-    }
-
-    return { success: true, xpEarned, isDayCompleted };
-  };
-
-  const unlockBadge = (badgeId) => {
-    setBadges((prev) =>
-      prev.map((b) =>
-        b.id === badgeId
-          ? { ...b, earned: true, earnedAt: new Date().toISOString() }
-          : b
-      )
-    );
-    const targetBadge = badges.find((b) => b.id === badgeId);
-    if (targetBadge) {
-      addNotification({
-        title: `Badge Unlocked: ${targetBadge.name} 🏆`,
-        message: targetBadge.description,
-        type: 'badge',
-      });
-      triggerConfetti();
+      return { success: false, error: res.data?.message || 'Completion failed' };
+    } catch (err) {
+      return {
+        success: false,
+        error: err.response?.data?.message || 'Failed to complete activity on server',
+      };
     }
   };
 
@@ -179,16 +159,17 @@ export function JourneyProvider({ children }) {
     <JourneyContext.Provider
       value={{
         days,
+        loadingDays,
         activitiesMap,
         badges,
         showCelebration,
         closeCelebration,
         triggerConfetti,
+        loadDayActivities,
         getDayActivities,
         completeActivity,
-        unlockBadge,
-        setDays,
-        setActivitiesMap,
+        fetchJourney,
+        fetchBadges,
       }}
     >
       {children}

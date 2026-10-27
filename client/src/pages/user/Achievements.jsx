@@ -1,88 +1,44 @@
 import React, { useState } from 'react';
 import {
-  Trophy,
-  Award,
-  Lock,
-  Sparkles,
-  CheckCircle2,
-  Calendar,
-  Flame,
-  Rocket,
-  HeartHandshake,
-  Zap,
-  Compass,
-  ShieldCheck
+  Sparkles
 } from 'lucide-react';
 import { useJourney } from '../../context/JourneyContext';
 import Card from '../../components/common/Card';
-import Badge from '../../components/common/Badge';
+import BadgeMedallion from '../../components/common/BadgeMedallion';
 
 export default function Achievements() {
   const { badges } = useJourney();
   const [filter, setFilter] = useState('all'); // 'all', 'earned', 'locked'
 
-  const earnedBadges = badges.filter((b) => b.earned);
-  const lockedBadges = badges.filter((b) => !b.earned);
+  // Clean badges data to ensure no legacy 'LaunchPad' text
+  const cleanBadges = badges.map((b) => {
+    let name = b.name;
+    let description = b.description;
+    if (b.id === 'badge-8' || name === 'LaunchPad Champion') {
+      name = 'Yardi Onboarding Champion';
+    }
+    if (description && description.includes('LaunchPad')) {
+      description = description.replace(/LaunchPad Journey/g, 'Pre-Joining Journey');
+    }
+    return {
+      ...b,
+      name,
+      description,
+    };
+  });
 
-  const filteredBadges = badges.filter((b) => {
+  const earnedBadges = cleanBadges.filter((b) => b.earned);
+  const lockedBadges = cleanBadges.filter((b) => !b.earned);
+
+  const filteredBadges = cleanBadges.filter((b) => {
     if (filter === 'earned') return b.earned;
     if (filter === 'locked') return !b.earned;
     return true;
   });
 
-  const getIcon = (iconName) => {
-    switch (iconName) {
-      case 'Rocket':
-        return Rocket;
-      case 'Flame':
-        return Flame;
-      case 'HeartHandshake':
-        return HeartHandshake;
-      case 'Zap':
-        return Zap;
-      case 'Compass':
-        return Compass;
-      case 'ShieldCheck':
-        return ShieldCheck;
-      case 'Trophy':
-        return Trophy;
-      case 'Award':
-      default:
-        return Award;
-    }
-  };
-
   return (
     <div className="space-y-6">
-      {/* Header Banner */}
-      <div className="rounded-3xl bg-gradient-to-r from-amber-600 via-orange-600 to-amber-700 text-white p-6 sm:p-8 shadow-card relative overflow-hidden">
-        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
-          <div className="space-y-2 max-w-xl">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-black/20 text-white text-xs font-bold border border-white/20">
-              <Trophy className="w-3.5 h-3.5" />
-              <span>LaunchPad Milestones & Rewards</span>
-            </div>
-            <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
-              Badges & Achievements
-            </h1>
-            <p className="text-xs sm:text-sm text-amber-100 leading-relaxed">
-              Earn distinctive badges by maintaining streaks, scoring high on quizzes, and conquering daily pre-joining challenges.
-            </p>
-          </div>
-
-          <div className="bg-black/30 backdrop-blur-md rounded-2xl p-5 border border-white/10 text-left min-w-[220px]">
-            <div className="text-xs font-semibold text-amber-200 mb-1">Total Unlocked</div>
-            <div className="text-3xl font-black text-white">
-              {earnedBadges.length} / {badges.length}
-            </div>
-            <div className="text-xs text-amber-200/80 mt-1">
-              {Math.round((earnedBadges.length / badges.length) * 100)}% Badges Collected
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Filter Tabs */}
+      {/* Filter Tabs - Exact original design */}
       <div className="flex items-center gap-2 p-1 bg-slate-100 rounded-2xl border border-slate-200/80 text-xs font-semibold w-fit">
         <button
           onClick={() => setFilter('all')}
@@ -92,13 +48,13 @@ export default function Achievements() {
               : 'text-slate-600 hover:text-slate-900'
           }`}
         >
-          All Badges ({badges.length})
+          All Badges ({cleanBadges.length})
         </button>
         <button
           onClick={() => setFilter('earned')}
           className={`px-3 py-1.5 rounded-xl transition-all ${
             filter === 'earned'
-              ? 'bg-white text-amber-700 shadow-xs'
+              ? 'bg-white text-slate-900 shadow-xs'
               : 'text-slate-600 hover:text-slate-900'
           }`}
         >
@@ -116,37 +72,25 @@ export default function Achievements() {
         </button>
       </div>
 
-      {/* Badges Grid */}
+      {/* Badges Grid - Exact original card layout with mature medallions */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
         {filteredBadges.map((badge) => {
-          const IconComp = getIcon(badge.icon);
-
           return (
             <Card
-              key={badge.id}
+              key={badge.id || badge.badgeId}
               className={`p-6 text-center space-y-4 transition-all duration-300 ${
                 badge.earned
-                  ? 'bg-white border-amber-200/80 shadow-soft hover:shadow-card hover:-translate-y-1'
+                  ? 'bg-white border-slate-200/80 shadow-soft hover:shadow-card hover:-translate-y-1'
                   : 'bg-slate-50/60 border-slate-200/60 opacity-60'
               }`}
             >
-              {/* Badge Icon */}
-              <div className="relative mx-auto w-16 h-16">
-                {badge.earned ? (
-                  <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-amber-400 to-yellow-300 text-amber-950 flex items-center justify-center shadow-md shadow-amber-400/20">
-                    <IconComp className="w-8 h-8" />
-                  </div>
-                ) : (
-                  <div className="w-16 h-16 rounded-2xl bg-slate-200 text-slate-400 flex items-center justify-center">
-                    <Lock className="w-7 h-7" />
-                  </div>
-                )}
-
-                {badge.earned && (
-                  <span className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-emerald-500 text-white flex items-center justify-center shadow-xs">
-                    <CheckCircle2 className="w-3.5 h-3.5" />
-                  </span>
-                )}
+              {/* Badge Emblem */}
+              <div className="relative mx-auto flex items-center justify-center">
+                <BadgeMedallion
+                  badgeId={badge.id || badge.badgeId}
+                  earned={badge.earned}
+                  size="md"
+                />
               </div>
 
               {/* Title & Description */}

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   HelpCircle,
   Plus,
@@ -6,20 +6,23 @@ import {
   Edit,
   Sparkles,
   CheckCircle2,
-  CheckSquare
+  CheckSquare,
+  Loader2
 } from 'lucide-react';
 import Card from '../../components/common/Card';
 import Button from '../../components/common/Button';
 import Badge from '../../components/common/Badge';
 import Modal from '../../components/common/Modal';
-import { mockQuizDay5 } from '../../data/mockData';
+import api from '../../services/api';
 
 export default function AdminQuizzes() {
-  const [quizzes, setQuizzes] = useState([mockQuizDay5]);
+  const [quizzes, setQuizzes] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   // New Quiz state
   const [title, setTitle] = useState('');
+  const [dayId, setDayId] = useState('day-1');
   const [passingScore, setPassingScore] = useState(75);
   const [xp, setXp] = useState(100);
   const [questions, setQuestions] = useState([
@@ -30,6 +33,22 @@ export default function AdminQuizzes() {
       explanation: '',
     },
   ]);
+
+  useEffect(() => {
+    const fetchQuizzes = async () => {
+      try {
+        const res = await api.get('/admin/quizzes');
+        if (res.data?.success && res.data.quizzes) {
+          setQuizzes(res.data.quizzes);
+        }
+      } catch (err) {
+        console.error('Failed to fetch admin quizzes:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchQuizzes();
+  }, []);
 
   const handleAddQuestionField = () => {
     setQuestions([
@@ -43,17 +62,27 @@ export default function AdminQuizzes() {
     ]);
   };
 
-  const handleCreateQuiz = (e) => {
+  const handleCreateQuiz = async (e) => {
     e.preventDefault();
-    const newQuiz = {
-      id: `quiz-${Date.now()}`,
-      dayId: 'day-5',
+    const quizId = `quiz-${dayId}`;
+    const payload = {
+      quizId,
+      dayId,
       title,
       passingScore: Number(passingScore),
       xp: Number(xp),
       questions,
     };
-    setQuizzes([...quizzes, newQuiz]);
+
+    try {
+      const res = await api.post('/admin/quizzes', payload);
+      const created = res.data?.quiz || payload;
+      setQuizzes((prev) => [...prev, created]);
+    } catch (err) {
+      console.error('Failed to create quiz on server:', err);
+      setQuizzes((prev) => [...prev, payload]);
+    }
+
     setIsModalOpen(false);
     setTitle('');
   };
