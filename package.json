@@ -1,0 +1,27 @@
+{
+  "name": "yardi-launchpad",
+  "version": "1.0.0",
+  "description": "YARDI LaunchPad – 15-Day Pre-Joining Journey Platform",
+  "main": "server/server.js",
+  "scripts": {
+    "dev": "concurrently -n \"SERVER,CLIENT\" -c \"blue,magenta\" \"npm run server\" \"npm run client\"",
+    "server": "npm --prefix server run dev",
+    "client": "npm --prefix client run dev",
+    "seed": "npm --prefix server run seed",
+    "install:all": "npm install && npm --prefix server install && npm --prefix client install"
+  },
+  "keywords": [
+    "yardi",
+    "launchpad",
+    "onboarding",
+    "employee-journey",
+    "react",
+    "express",
+    "mongodb"
+  ],
+  "author": "Yardi Systems",
+  "license": "ISC",
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  }
+}

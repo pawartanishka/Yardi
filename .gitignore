@@ -1,0 +1,7 @@
+node_modules/
+.env
+dist/
+build/
+*.lock
+package-lock.json
+.git_backup/
