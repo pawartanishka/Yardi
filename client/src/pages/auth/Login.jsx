@@ -14,6 +14,7 @@ import {
   Layers
 } from 'lucide-react';
 import Button from '../../components/common/Button';
+import YardiLogo from '../../components/common/YardiLogo';
 import { useAuth } from '../../context/AuthContext';
 
 export default function Login() {
@@ -66,18 +67,10 @@ export default function Login() {
 
         {/* Brand header */}
         <div className="relative z-10 flex items-center gap-3">
-          <div className="w-11 h-11 rounded-2xl bg-blue-600 flex items-center justify-center shadow-glow">
-            <Compass className="w-6 h-6 text-white" />
-          </div>
-          <div>
-            <div className="flex items-center gap-1.5">
-              <span className="font-extrabold text-blue-400 tracking-wider text-sm">YARDI</span>
-              <span className="text-[10px] bg-blue-500/20 text-blue-300 font-semibold px-2 py-0.5 rounded-full border border-blue-400/20">
-                Enterprise
-              </span>
-            </div>
-            <h1 className="text-xl font-bold tracking-tight text-white">LaunchPad</h1>
-          </div>
+          <YardiLogo className="h-8" variant="white" />
+          <span className="text-[10px] bg-blue-500/20 text-blue-300 font-semibold px-2 py-0.5 rounded-full border border-blue-400/20">
+            Enterprise LaunchPad
+          </span>
         </div>
 
         {/* Center Motivational Content */}
@@ -132,14 +125,11 @@ export default function Login() {
       <div className="flex-1 flex flex-col justify-center px-6 sm:px-12 lg:px-16 py-12">
         <div className="w-full max-w-md mx-auto space-y-8">
           {/* Mobile Header */}
-          <div className="lg:hidden flex items-center gap-3 mb-6">
-            <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center shadow-glow">
-              <Compass className="w-5 h-5 text-white" />
-            </div>
-            <div>
-              <span className="font-extrabold text-blue-600 tracking-wider text-xs">YARDI</span>
-              <h2 className="text-lg font-bold text-slate-900">LaunchPad</h2>
-            </div>
+          <div className="lg:hidden flex items-center justify-between mb-6">
+            <YardiLogo className="h-7" variant="blue" />
+            <span className="text-[10px] bg-blue-100 text-blue-800 font-bold px-2 py-0.5 rounded-full">
+              LaunchPad
+            </span>
           </div>
 
           <div>

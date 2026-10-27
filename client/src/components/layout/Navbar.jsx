@@ -2,6 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { Menu, Bell, Sparkles, Flame, Shield, ChevronDown } from 'lucide-react';
 import Avatar from '../common/Avatar';
+import YardiLogo from '../common/YardiLogo';
 import { useAuth } from '../../context/AuthContext';
 import { useNotifications } from '../../context/NotificationContext';
 
@@ -21,6 +22,10 @@ export default function Navbar({ onOpenMobile }) {
         >
           <Menu className="w-5 h-5" />
         </button>
+
+        <div className="lg:hidden flex items-center">
+          <YardiLogo className="h-6" variant="blue" />
+        </div>
 
         <div className="hidden sm:flex items-center gap-2">
           <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-100">

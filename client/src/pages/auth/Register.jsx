@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Compass, User, Mail, Lock, Building, Calendar, ArrowRight, ShieldCheck } from 'lucide-react';
 import Button from '../../components/common/Button';
+import YardiLogo from '../../components/common/YardiLogo';
 import { useAuth } from '../../context/AuthContext';
 
 export default function Register() {
@@ -37,8 +38,8 @@ export default function Register() {
     <div className="min-h-screen w-full flex items-center justify-center bg-slate-50 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8 bg-white p-8 sm:p-10 rounded-3xl shadow-card border border-slate-200/80">
         <div className="text-center space-y-2">
-          <div className="w-12 h-12 rounded-2xl bg-blue-600 text-white flex items-center justify-center mx-auto shadow-glow">
-            <Compass className="w-6 h-6" />
+          <div className="flex justify-center mb-2">
+            <YardiLogo className="h-9" variant="blue" />
           </div>
           <h2 className="text-2xl font-black text-slate-900 tracking-tight">
             Account Activation

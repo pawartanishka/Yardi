@@ -22,6 +22,7 @@ import {
   ChevronRight
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import YardiLogo from '../common/YardiLogo';
 
 export default function Sidebar({ onCloseMobile }) {
   const { user, logout } = useAuth();
@@ -57,16 +58,10 @@ export default function Sidebar({ onCloseMobile }) {
       {/* Brand Header */}
       <div className="p-6 border-b border-slate-800/80 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-500 flex items-center justify-center shadow-glow">
-            <Compass className="w-5 h-5 text-white" />
-          </div>
-          <div>
-            <div className="flex items-center gap-1.5">
-              <span className="font-extrabold tracking-wider text-sm text-blue-400">YARDI</span>
-              <span className="text-[10px] bg-blue-500/20 text-blue-300 font-semibold px-1.5 py-0.5 rounded">v2.0</span>
-            </div>
-            <h1 className="text-base font-bold tracking-tight text-white">LaunchPad</h1>
-          </div>
+          <YardiLogo className="h-7" variant="white" />
+          <span className="text-[10px] bg-blue-500/20 text-blue-300 font-semibold px-1.5 py-0.5 rounded border border-blue-400/30">
+            LaunchPad
+          </span>
         </div>
       </div>
 
